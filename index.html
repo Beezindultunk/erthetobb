@@ -5117,7 +5117,7 @@ swRegisztrál();
 // ══════════════════════════════════════
 const AT = {
   base:   'app29gg3EPS9OYY5O',
-  token:  'SAJAT_TOKEN_IDE',   // ← Ide írd be az új tokenedet
+  token:  localStorage.getItem('at_token') || 'SAJAT_TOKEN_IDE',   // ← Ide írd be az új tokenedet
   url:    id => `https://api.airtable.com/v0/app29gg3EPS9OYY5O/${id}`,
   headers: () => ({
     'Authorization': 'Bearer ' + AT.token,
