@@ -5172,12 +5172,12 @@ async function atPatch(tabla, recordId, mezok) {
 // 🔐 VALÓDI BELÉPÉS — Airtable alapján
 // ══════════════════════════════════════
 async function belepGomb() {
-  const email    = document.getElementById('belepes-email')?.value?.trim()?.toLowerCase();
-  const jelszo   = document.getElementById('belepes-jelszo')?.value;
-  const hibaEl   = document.getElementById('belepes-hiba');
+  const email    = document.getElementById('bel-email')?.value?.trim()?.toLowerCase();
+  const jelszo   = document.getElementById('bel-jelszo')?.value;
+  const hibaEl   = document.getElementById('belep-hiba');
 
   if (!email || !jelszo) {
-    if (hibaEl) { hibaEl.textContent = 'Add meg az email címed és jelszavad!'; hibaEl.style.display = 'block'; }
+    if (hibaEl) { hibaEl.textContent = '⚠️ Add meg az email címed és jelszavad!'; hibaEl.style.display = 'block'; }
     return;
   }
 
