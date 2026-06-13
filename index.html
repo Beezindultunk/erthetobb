@@ -2743,30 +2743,16 @@ Büszke lehetsz magadra — szuper hét volt! 💪
 
 // ══ FELHASZNÁLÓI ADATBÁZIS (demo) ══
 const DEMO_FELHASZANALOK = {
-  'anna@demo.hu':       { jelszo:'demo123', szerep:'ugyfel',     nev:'Kovács Anna',   program:'alatt',  konzultans:'eva',   het:3, hf:82 },
-  'petra@demo.hu':      { jelszo:'demo123', szerep:'ugyfel',     nev:'Szabó Petra',   program:'eletmod',konzultans:'eva',   het:7, hf:91 },
-  'eva@demo.hu':        { jelszo:'demo123', szerep:'konzultans', nev:'Horváth Éva',   konzultansId:'eva' },
-  'tamas@demo.hu':      { jelszo:'demo123', szerep:'konzultans', nev:'Kiss Tamás',     konzultansId:'tamas' },
-  'admin@demo.hu':      { jelszo:'demo123', szerep:'admin',      nev:'Admin' },
+  'anna@demo.hu':       { jelszo:'demo', szerep:'ugyfel',     nev:'Kovács Anna',   program:'alatt',  konzultans:'eva',   het:3, hf:82 },
+  'petra@demo.hu':      { jelszo:'demo', szerep:'ugyfel',     nev:'Szabó Petra',   program:'eletmod',konzultans:'eva',   het:7, hf:91 },
+  'eva@demo.hu':        { jelszo:'demo', szerep:'konzultans', nev:'Horváth Éva',   konzultansId:'eva' },
+  'tamas@demo.hu':      { jelszo:'demo', szerep:'konzultans', nev:'Kiss Tamás',     konzultansId:'tamas' },
+  'admin@demo.hu':      { jelszo:'demo', szerep:'admin',      nev:'Admin' },
 };
 
 let bejelentkezettUser = null;
 
 // ── Belépés gomb ──
-function belepGomb() {
-  const email  = (document.getElementById('bel-email')?.value || '').trim().toLowerCase();
-  const jelszo = document.getElementById('bel-jelszo')?.value || '';
-  const hiba   = document.getElementById('belep-hiba');
-
-  const user = DEMO_FELHASZANALOK[email];
-  if (!user || user.jelszo !== jelszo) {
-    if (hiba) { hiba.textContent = '⚠️ Hibás email vagy jelszó!'; hiba.style.display = 'block'; }
-    setTimeout(() => { if(hiba) hiba.style.display='none'; }, 3000);
-    return;
-  }
-  bejelentkezettUser = { ...user, email };
-  navSzerep(user.szerep);
-}
 
 // ── Demo belépők ──
 function demoBeleg(szerep) {
