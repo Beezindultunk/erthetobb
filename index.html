@@ -2747,7 +2747,7 @@ Büszke lehetsz magadra — szuper hét volt! 💪
 const DEMO_FELHASZANALOK = {
   'anna@demo.hu':       { jelszo:'demo', szerep:'ugyfel',     nev:'Kovács Anna',   program:'alatt',  konzultans:'eva',   het:3, hf:82 },
   'petra@demo.hu':      { jelszo:'demo', szerep:'ugyfel',     nev:'Szabó Petra',   program:'eletmod',konzultans:'eva',   het:7, hf:91 },
-  'eva@demo.hu':        { jelszo:'demo', szerep:'konzultans', nev:'Horváth Éva',   konzultansId:'eva' },
+  'eva@demo.hu':        { jelszo:'demo', szerep:'konzultans', nev:'Széplábi Éva',   konzultansId:'eva' },
   'tamas@demo.hu':      { jelszo:'demo', szerep:'konzultans', nev:'Kiss Tamás',     konzultansId:'tamas' },
   'admin@demo.hu':      { jelszo:'demo', szerep:'admin',      nev:'Admin' },
 };
@@ -4299,78 +4299,344 @@ function hetiOsszFrissit() {
 // ══════════════════════════════════════
 
 const KONZULTACIOK = [
-  { het:1,  cim:'Bevezetés — Alapfelmérés',          ikon:'🎯', szin:'var(--kek)',     bg:'var(--kek-v)',
-    leiras:'Az első találkozó célja a teljes kép megismerése. Honnan indulunk, mi a cél, mi az eddigi háttér.',
-    konzultans_tema:['Ügyfél céljainak megismerése','Jelenlegi étkezési szokások','Személyes adatok rögzítése','Alapbetegségek, allergiák','Elvárások és félelmek megbeszélése','Motiváció feltérképezése'],
-    adatgyujtes:[{id:'suly',label:'Kezdő súly (kg)',tip:'number'},{id:'derek',label:'Derék (cm)',tip:'number'},{id:'csipo',label:'Csípő (cm)',tip:'number'},{id:'mell',label:'Mell (cm)',tip:'number'},{id:'energia',label:'Energiaszint (1-10)',tip:'slider'},{id:'etrend',label:'Jelenlegi étrend',tip:'text'}],
-    hazi_ugyfel:['🥚 Fehérje minden reggelire — tojás, görög joghurt, hús','💧 Napi 2L víz — tartsd szem előtt a vizesüveget!','📖 Töltsd ki minden nap a naplódat','🚫 Gabona nélküli nap minden nap — kenyér, tészta, rizs helyett valódi ételek'],
-    hazi_konzultans:['Kalória és makró cél beállítása a rendszerben','Üdvözlő üzenet küldése','Következő időpont egyeztetése'] },
-  { het:2,  cim:'Táplálkozástudomány alapjai',        ikon:'🧬', szin:'var(--zold)',    bg:'var(--zold-v)',
-    leiras:'Miért nem kalóriát számolunk? Mi a valódi hatása az ételeknek? DÁ rendszer, glikémiás index, fehérje jóllakottság.',
-    konzultans_tema:['Az elmúlt hét tapasztalatai','A DA rendszer és étvágy','Glikémiás index alapjai','Fehérje szerepe a jóllakottságban','Gyümölcsök és zöldségek szerepe','Motiváció és szokásépítés'],
-    adatgyujtes:[{id:'suly',label:'Heti súly (kg)',tip:'number'},{id:'erzes',label:'Hogyan telt a hét? (1-10)',tip:'slider'},{id:'nehezseg',label:'Nehézségek, kihívások',tip:'text'},{id:'siker',label:'Mi sikerült jól?',tip:'text'}],
-    hazi_ugyfel:['🥩 Fehérje minden étkezésnél: hús, hal, tojás, görög joghurt','🥦 Zöldség minimum 2x naponta','☕ Kávé max napi 2, ne üres gyomorra','📊 Figyeld: mikor van energiazuhanásod? Mit ettél előtte?'],
-    hazi_konzultans:['Napló átnézése, visszajelzés','AI házi feladat generálása a 3. hétre'] },
-  { het:3,  cim:'Fehérjék, halak, tojás, tejtermékek',ikon:'🍳', szin:'var(--zold)',    bg:'var(--zold-v)',
-    leiras:'Fehérjeforrások részletesen. Feldolgozott húskészítmények kerülése. Szója problémái. Glikémiás index mélyebben.',
-    konzultans_tema:['Az elmúlt hét tapasztalatai','Fehérjeforrások áttekintése — mi a legjobb','Feldolgozott húsok és felvágottak problémái','Szója és növényi fehérjék','Glikémiás index — legbiztonságosabb szénhidrátok','Tejtermékek: minőség számít'],
-    adatgyujtes:[{id:'suly',label:'Heti súly (kg)',tip:'number'},{id:'feherje',label:'Fehérje tudatosság (1-5)',tip:'slider'},{id:'megjegyzes',label:'Konzultáns megjegyzései',tip:'text'}],
-    hazi_ugyfel:['🐟 Heti 2-3x hal vagy tenger gyümölcsei','🥚 Tojás naponta — nincs limit egészséges embernél','🧀 Tejtermékek közül a legjobb minőségű','❌ Felvágottak, virsli, párizsi — erre a hétre teljesen ki'],
-    hazi_konzultans:['Részletes visszajelzés a naplóról','Makró arányok finomhangolása ha szükséges'] },
-  { het:4,  cim:'Zsírok rehabilitációja',             ikon:'🥑', szin:'var(--narancs)', bg:'var(--narancs-v)',
-    leiras:'Zsírok teljes rehabilitációja. Omega-3/6 egyensúly. Kerülendő ipari olajok. Koleszterin valódi szerepe. 4 hetes összefoglaló.',
-    konzultans_tema:['Az elmúlt hét — 4. hét mérföldkő!','Zsírok rehabilitációja — miért félünk tőlük','Omega-3 vs Omega-6 egyensúly','Legjobb zsírok: olívaolaj, vaj, kókuszolaj, avokádó','Kerülendő: napraforgóolaj, repceolaj','Koleszterin valódi szerepe'],
-    adatgyujtes:[{id:'suly',label:'4. heti súly (kg)',tip:'number'},{id:'derek',label:'Derék (cm) — 4. hét',tip:'number'},{id:'csipo',label:'Csípő (cm) — 4. hét',tip:'number'},{id:'mell',label:'Mell (cm) — 4. hét',tip:'number'},{id:'fogyas_ossz',label:'Fogyás 4 hét alatt (kg)',tip:'number'}],
-    hazi_ugyfel:['🫒 Főzz olívaolajjal vagy vajjal — napraforgóolaj ki!','🥑 Avokádó hetente legalább 2-3x','🐟 Lazac, szardínia, makréla: Omega-3 — heti 3x','💊 Ha nincs rendszeres halfogyasztás: Omega-3 kiegészítő'],
-    hazi_konzultans:['4 hetes összefoglaló elkészítése','Súly és cm trend elemzése','Következő 4 hét iránya'] },
-  { het:5,  cim:'Bélflóra és immunrendszer',          ikon:'🦠', szin:'var(--lila)',    bg:'var(--lila-v)',
-    leiras:'Probiotikumok, prebiotikumok. Bélflóra helyreállítása. Centiméter szekció. Az immunrendszer 70%-a a bélben.',
-    konzultans_tema:['Az elmúlt hét tapasztalatai','Bélflóra alapjai — a második agyunk','Probiotikumok: kefir, savanyú káposzta, kombucha','Prebiotikumok: mit esznek a jó baktériumok','Centiméter változások értékelése','A legrosszabb bélflóra rontó ételek'],
-    adatgyujtes:[{id:'suly',label:'Heti súly (kg)',tip:'number'},{id:'emesztes',label:'Emésztés minősége (1-5)',tip:'slider'},{id:'probiotikum',label:'Probiotikum fogyasztás',tip:'text'}],
-    hazi_ugyfel:['🥛 Kefir vagy görög joghurt minden nap','🥬 Savanyú káposzta, kimchi bevezetése','🧅 Prebiotikus ételek: hagyma, fokhagyma, spárga','💊 Probiotikum kiegészítő mérlegelése'],
-    hazi_konzultans:['Emésztési panaszok részletes felmérése','Probiotikum javaslat személyre szabása'] },
-  { het:6,  cim:'Stressz és mellékvesék',             ikon:'🧘', szin:'var(--lila)',    bg:'var(--lila-v)',
-    leiras:'Stressz hatása az emésztésre és fogyásra. Kortizol és has körüli zsír. Magnézium. Félidős értékelés.',
-    konzultans_tema:['Az elmúlt hét — félúton járunk!','Stressz hatása az emésztésre és fogyásra','Kortizol: miért halmoz zsírt a has körül','Mellékvese fáradtság jelei','Magnézium — a stressz ásványa','Mindfullness és evés kapcsolata'],
-    adatgyujtes:[{id:'suly',label:'6. heti súly (kg)',tip:'number'},{id:'stressz',label:'Stressz szint (1-10)',tip:'slider'},{id:'kov_het',label:'Következő időszak tervei',tip:'text'}],
-    hazi_ugyfel:['🧘 Napi 5 perces légzőgyakorlat','💊 Magnézium-glicinát este','📵 Lefekvés előtt 1 órával ne nézz képernyőt','🛁 Esti rutin kialakítása'],
-    hazi_konzultans:['6 hetes félidős értékelés','Program módosítás ha szükséges','Következő 6 hét fókuszának meghatározása'] },
-  { het:7,  cim:'Hormonok és táplálkozás',            ikon:'⚖️', szin:'var(--rozsa)',   bg:'var(--rozsa-v)',
-    leiras:'Inzulin rezisztencia. Pajzsmirigy és táplálkozás. Ösztrogén és progeszteron egyensúly ételekkel.',
-    konzultans_tema:['Az elmúlt hét tapasztalatai','Inzulin rezisztencia részletesen','Pajzsmirigy és táplálkozás (jód, szelén, cink)','Ösztrogén és progeszteron egyensúly','Tesztoszteron természetes optimalizálása','Keresztesvirágú zöldségek szerepe'],
-    adatgyujtes:[{id:'suly',label:'Heti súly (kg)',tip:'number'},{id:'hormon',label:'Hormonális panaszok',tip:'text'},{id:'pajzs',label:'Pajzsmirigy vizsgált?',tip:'text'}],
-    hazi_ugyfel:['🥦 Keresztesvirágú zöldségek naponta: brokkoli, karfiol','🌰 Len- és tökmag: DIM forrás, ösztrogén metabolizmus','🧄 Fokhagyma és hagyma: szelén, pajzsmirigy','🚫 Szója minimalizálása'],
-    hazi_konzultans:['Vérvizsgálat javaslat ha indokolt (TSH, T3, T4)','Hormonális panaszok részletes felmérése'] },
-  { het:8,  cim:'Hormonok és stresszkezelés — mélyítés',ikon:'🔬', szin:'var(--rozsa)',   bg:'var(--rozsa-v)',
-    leiras:'Bél-agy tengely. Szerotonin 90%-a a bélben. Dopamin és fehérje. Neurotranszmitterek és ételek. 8 hetes összefoglaló.',
-    konzultans_tema:['Az elmúlt hét tapasztalatai','Bél-agy tengely részletesen','Szerotonin termelése a bélben — étrend hatása','Dopamin és fehérje (tirozin) kapcsolata','Adaptogens gyógynövények bemutatása','8 hetes összefoglaló és tünetlista'],
-    adatgyujtes:[{id:'suly',label:'8. heti súly (kg)',tip:'number'},{id:'derek',label:'Derék (cm) — 8. hét',tip:'number'},{id:'csipo',label:'Csípő (cm) — 8. hét',tip:'number'},{id:'mell',label:'Mell (cm) — 8. hét',tip:'number'},{id:'hangulat',label:'Hangulat változás',tip:'text'}],
-    hazi_ugyfel:['🍫 Étcsoki min 85%: magnézium + antioxidáns','🫐 Bogyós gyümölcsök: polifenolok és agy-egészség','🥜 Diófélék: triptofán → szerotonin','🌿 Ashwagandha, rhodiola megbeszélése'],
-    hazi_konzultans:['8 hetes összefoglaló elkészítése','Tünetlista összehasonlítása az indulással','Utolsó 4 hét stratégiája'] },
-  { het:9,  cim:'Méregtelenítés természetes úton',    ikon:'🌿', szin:'var(--zold)',    bg:'var(--zold-v)',
-    leiras:'Máj és detox folyamatok. Xenoösztrogének és kémiai anyagok. Természetes méregtelenítő ételek.',
-    konzultans_tema:['Az elmúlt hét tapasztalatai','Máj és detox: hogyan dolgozza fel a szervezet a mérgeket','Fázis I és II detoxifikáció ételekkel','Xenoösztrogének: műanyagok és kozmetikumok','Természetes detox ételek: máj, cékla, koriander','Alkohol, koffein, cukor csökkentése'],
-    adatgyujtes:[{id:'suly',label:'Heti súly (kg)',tip:'number'},{id:'bor',label:'Bőrállapot változás',tip:'text'},{id:'energia',label:'Energiaszint (1-10)',tip:'slider'}],
-    hazi_ugyfel:['💧 Meleg vizes citromlé ébredés után','🥬 Zöld smoothie vagy leveses ételek','🫙 Műanyag tartályok cseréje üvegre','🧴 Kozmetikumok átnézése — parabénmentes alternatívák'],
-    hazi_konzultans:['Toxin terhelés becslése','Detox protokoll személyre szabása'] },
-  { het:10, cim:'Vitaminok, ásványi anyagok, kiegészítők',ikon:'💊', szin:'var(--sarga)',  bg:'var(--sarga-v)',
-    leiras:'D3, B12, Magnézium, Omega-3, Cink. Kiegészítők szükségessége és minősége. Vérvizsgálat értelmezése.',
-    konzultans_tema:['Az elmúlt hét tapasztalatai','D3 vitamin: miért szinte mindenki hiányos','B12 vitamin: kockázati csoportok','Magnézium formái (glicinát, malát, citrát)','Vitaminhiányok tünetei','Kiegészítők minősége és forrása'],
-    adatgyujtes:[{id:'suly',label:'Heti súly (kg)',tip:'number'},{id:'vitaminok',label:'Jelenleg szedett vitaminok',tip:'text'},{id:'vervizsgelat',label:'Van vérvizsgálat?',tip:'text'},{id:'energia',label:'Energiaszint (1-10)',tip:'slider'}],
-    hazi_ugyfel:['☀️ D3 vitamin: napi 2000-4000 NE K2-vel együtt','💊 Magnézium-glicinát este: alvás és stressz','🐟 Omega-3: min 1g EPA+DHA naponta','🩸 Vérvizsgálat kérése: D3, B12, ferritin, TSH'],
-    hazi_konzultans:['Vitamin protokoll személyre szabása','Vérvizsgálat eredmények értelmezése','Kiegészítők forrásának megadása'] },
-  { het:11, cim:'Mozgás és táplálkozás szinergiája',  ikon:'🏃', szin:'var(--kek)',     bg:'var(--kek-v)',
-    leiras:'Étkezési időzítés edzés körül. Nyereség megőrzése. Program záró eredmények. Következő időszak tervezése.',
-    konzultans_tema:['Az elmúlt hét tapasztalatai','Mozgás és étkezés időzítése','Edzés előtt és után: mit együnk?','Program záró eredmények áttekintése','Visszaesési stratégiák','Napi rutinok véglegesítése'],
-    adatgyujtes:[{id:'suly',label:'Heti súly (kg)',tip:'number'},{id:'mozgas',label:'Heti mozgásgyakoriság',tip:'text'},{id:'zaras',label:'Következő időszak terve',tip:'text'}],
-    hazi_ugyfel:['🏃 Edzés előtt 1.5-2 órával fehérjés + zsíros étkezés','💪 Edzés után 30 percen belül: min 20-30g fehérje','🛌 Edzés napján extra 0.5L víz','📝 Záró értékelés kitöltése: mi változott?'],
-    hazi_konzultans:['Záró összefoglaló előkészítése','Program értékelés és javaslatok','Továbblépési lehetőségek felkínálása'] },
-  { het:12, cim:'Program zárása — Eredmények és továbblépés',ikon:'🏆', szin:'var(--narancs)', bg:'var(--narancs-v)',
-    leiras:'12 hetes utazás lezárása. Összes eredmény összesítve. Következő lépések. A fenntarthatóság titka. Ünneplés! 🎉',
-    konzultans_tema:['Teljes program visszatekintés','Összes mért adat: indulás vs záró','Legnagyobb sikerek és tanulságok','Továbblépési lehetőségek','Fenntarthatóság stratégiái','Ünneplés és elismerés 🎉','Referral: kit ajánlana?'],
-    adatgyujtes:[{id:'suly_zaro',label:'Záró súly (kg)',tip:'number'},{id:'derek_zaro',label:'Záró derék (cm)',tip:'number'},{id:'csipo_zaro',label:'Záró csípő (cm)',tip:'number'},{id:'mell_zaro',label:'Záró mell (cm)',tip:'number'},{id:'nps',label:'Ajánlanád? (0-10)',tip:'slider'},{id:'visszajelzes',label:'Mit csinálnál másképp?',tip:'text'}],
-    hazi_ugyfel:['🌟 Gratulálunk! Töltsd ki a záró értékelést','📸 Küldj záró fotót (opcionális)','🤝 Gondold végig: kit ajánlanál?','📅 Következő program lehetőségek'],
-    hazi_konzultans:['Záró riport elkészítése és elküldése','NPS értékelés rögzítése','Referral folyamat elindítása','Következő program felkínálása'] },
+
+  // ══ 1. TALÁLKOZÓ ══
+  { het:1, cim:'Beiratkozás és alapok felmérése',
+    temak:[
+      'Ügyfél megismerése — személyes célok, motiváció',
+      'Adatfelvétel: múltbeli próbálkozások, beváltozott nyomtatvány',
+      'Alapprogram adatok rögzítése',
+      'Táplálék · Tapanyag meghatározása',
+      'Szénhidrát töltése – elindulás',
+      'Hétköznapi étel összeállítás megbeszélése',
+      'Fő heti feladatok: jódot turnik, almacetes víz',
+      'A beiratkozó személhető CH szora a szervezetben',
+      'Kapcsotartás szabályai és fonossága (Hiv aikadom)',
+      '⚗️ VÉRVÉTEL — alapadatok rögzítéséhez',
+    ],
+    hazi_ugyfel:[
+      'Napi ételnapló vezetése (minden étkezés fotóval)',
+      'Reggeli súlymérés minden nap, éhgyomorra',
+      'Napi minimum 2L víz + citrom reggel',
+      'Almacetes víz bevezetése',
+    ],
+    hazi_konzultans:[
+      'Alapadatok rögzítése a rendszerben',
+      'Vérvétel eredmény várakozás',
+      'Személyre szabott program összeállítása',
+    ],
+    adatgyujtes:[
+      { id:'suly', cim:'Súly (kg)', tipus:'szam' },
+      { id:'derek', cim:'Derék (cm)', tipus:'szam' },
+      { id:'csipo', cim:'Csípő (cm)', tipus:'szam' },
+      { id:'mell', cim:'Mell (cm)', tipus:'szam' },
+      { id:'foto', cim:'Beiratkozó fotó készítve?', tipus:'szoveg' },
+      { id:'cel_suly', cim:'Célsúly (kg)', tipus:'szam' },
+      { id:'alapanyagcsere', cim:'Alapanyagcsere adatok', tipus:'szoveg' },
+    ]
+  },
+
+  // ══ 2. TALÁLKOZÓ ══
+  { het:2, cim:'Táplálkozási rendszer — zöldségek, rostok, DHA',
+    temak:[
+      'Az elmúlt hét tapasztalatai',
+      'Növényi rostok (kálium, emésztési rendszer, DIA)',
+      'Jo és ross bélbaktériumok hatása (DIA)',
+      'Zöldségek · Salátok (kálium forrásai, fonossága)',
+      'Gyümölcsök (néhány - szabad, ásványok, fruktóz)',
+      'A bélbony hatása az emberi szervezetre',
+      'Glueten talarnu gabonák (tiltólista)',
+      'Keményvisok',
+    ],
+    hazi_ugyfel:[
+      'Gluténmentes étrend bevezetése teljesen',
+      'Napi 500g zöldség minimum',
+      'Fermentált ételek beépítése (kefir, savanyú káposzta)',
+    ],
+    hazi_konzultans:[
+      'Napló átnézés — emésztési rendszer értékelése',
+      'Bélflóra állapot felmérése',
+    ],
+    adatgyujtes:[
+      { id:'suly', cim:'Súly (kg)', tipus:'szam' },
+      { id:'emesztes', cim:'Emésztési változások', tipus:'szoveg' },
+      { id:'naplo_ertekeles', cim:'Napló értékelése', tipus:'szoveg' },
+    ]
+  },
+
+  // ══ 3. TALÁLKOZÓ ══
+  { het:3, cim:'Fehérjék — húsok, halak, tojás',
+    temak:[
+      'Az elmúlt hét tapasztalatai',
+      'Elfogyasztott ételek mennyisége',
+      'Fehérjék (állati, növényi)',
+      'Feldolgozott húskészítmények — szója tiltólista',
+      'Húsok, halak, tojás — helyes arányok',
+      'Tej, tejtermékek',
+      'Glikémiás index — Inzulin index',
+    ],
+    hazi_ugyfel:[
+      'Minden étkezésnél állati fehérje forrás',
+      'Feldolgozott húsok és szója kerülése',
+      'Tojás napi szinten beépítése',
+    ],
+    hazi_konzultans:[
+      'Fehérje compliance értékelése',
+      'Inzulinrezisztencia jeleit figyelni',
+    ],
+    adatgyujtes:[
+      { id:'suly', cim:'Súly (kg)', tipus:'szam' },
+      { id:'feherje_compliance', cim:'Fehérje teljesítés', tipus:'szoveg' },
+    ]
+  },
+
+  // ══ 4. TALÁLKOZÓ ══
+  { het:4, cim:'Zsírok — Omega-3, koleszterin, tiltólista',
+    temak:[
+      'Az elmúlt hét tapasztalatai',
+      'Zsírok (állati, növényi, kókuszzsír)',
+      'Élelmiszeripari dehidrogénezett zsírok (fitokémiai, Omega-3 és Omega-6 különbsége)',
+      'Futószalag Omega-3 / Omega-6 / kókuszzsír',
+      'Koleszterin',
+      'Mj',
+    ],
+    hazi_ugyfel:[
+      'Növényi olajok teljes cseréje',
+      'Vaj, kókuszzsír, olívaolaj használata',
+      'Tiltólista felülvizsgálata a kamrában',
+    ],
+    hazi_konzultans:[
+      'Első hónap összesítése',
+      'Testméretek újramérése — előtte-utána összehasonlítás',
+    ],
+    adatgyujtes:[
+      { id:'suly', cim:'Súly (kg)', tipus:'szam' },
+      { id:'derek', cim:'Derék (cm)', tipus:'szam' },
+      { id:'csipo', cim:'Csípő (cm)', tipus:'szam' },
+      { id:'mell', cim:'Mell (cm)', tipus:'szam' },
+    ]
+  },
+
+  // ══ 5. TALÁLKOZÓ ══
+  { het:5, cim:'Méregtelenítés + vérvizsgálat kiértékelés',
+    temak:[
+      'Az elmúlt hét tapasztalatai',
+      'A máj helyreállítása szerepe — és víz',
+      'Kandidóz szoros szerepe',
+      'A máj helyes helyreállítása',
+      'Gyógyköksz szerepe — és víz',
+      'C-vitamin szerepe — és víz',
+      'Candidózis (hidegen sajtolt, növényi)',
+      '🔬 VÉRVIZSGÁLAT KIÉRTÉKELÉSE — eredmények megbeszélése',
+    ],
+    hazi_ugyfel:[
+      'Napi reggeli citromos meleg víz folytatása',
+      'Máj-támogató ételek beépítése (cékla, koriander)',
+      'Probiotikum folytatása',
+    ],
+    hazi_konzultans:[
+      '⚗️ Vérvizsgálat eredmények kiértékelése és megbeszélése',
+      'Hiányok pótlása — személyre szabott vitamin protokoll',
+      'Bélflóra állapot értékelése',
+    ],
+    adatgyujtes:[
+      { id:'suly', cim:'Súly (kg)', tipus:'szam' },
+      { id:'d3_ertek', cim:'D3 szint (nmol/L)', tipus:'szam' },
+      { id:'vas_ertek', cim:'Vas / Ferritin szint', tipus:'szoveg' },
+      { id:'vercukor', cim:'Vércukor / Inzulin', tipus:'szoveg' },
+      { id:'tsh', cim:'TSH (pajzsmirigy)', tipus:'szoveg' },
+      { id:'verver_ertekeles', cim:'Összesített vérvizsgálat értékelés', tipus:'szoveg' },
+    ]
+  },
+
+  // ══ 6. TALÁLKOZÓ ══
+  { het:6, cim:'Mozgásforma és félidei értékelés',
+    temak:[
+      'Az elmúlt hét tapasztalatai',
+      'Az eddigi eredmények összegzése',
+      'Az eddigi elvégzett feladatok összegzése',
+      'Mozgás fontossága',
+      'Megfelelő mozgásforma bemutatása',
+      'Az eddigi programforma fenntartása',
+    ],
+    hazi_ugyfel:[
+      'Félidei visszatekintés — mit változtattál?',
+      'Mozgásforma bevezetése (séta, erősítő)',
+      'Fehérje mozgás utáni 30 percen belül',
+    ],
+    hazi_konzultans:[
+      'Félidős mérések és összehasonlítás',
+      'Program módosítása ha szükséges',
+      'Nyereség megállapítása a következő találkozóra',
+    ],
+    adatgyujtes:[
+      { id:'suly', cim:'Súly (kg)', tipus:'szam' },
+      { id:'derek', cim:'Derék (cm)', tipus:'szam' },
+      { id:'csipo', cim:'Csípő (cm)', tipus:'szam' },
+      { id:'mell', cim:'Mell (cm)', tipus:'szam' },
+      { id:'felidei_ertekeles', cim:'Félidei értékelés', tipus:'szoveg' },
+    ]
+  },
+
+  // ══ 7. TALÁLKOZÓ ══
+  { het:7, cim:'Stressz, idegrendszer és kortizol',
+    temak:[
+      'Az elmúlt hét tapasztalatai',
+      'Stressz és kezelése',
+      'Mellékvese és kortizol szerepe',
+      'Mellékek · Körülöt',
+    ],
+    hazi_ugyfel:[
+      'Alvás minimum 7-8 óra prioritása',
+      'Esti leszakadás rutinja (képernyőmentes 1h)',
+      'Magnézium este bevezetése',
+      'Stresszcsökkentő technika napi szinten',
+    ],
+    hazi_konzultans:[
+      'Alvás és energia szint értékelése',
+      'Magnézium protokoll személyre szabása',
+    ],
+    adatgyujtes:[
+      { id:'suly', cim:'Súly (kg)', tipus:'szam' },
+      { id:'alvas', cim:'Alvás minőség (1-10)', tipus:'szam' },
+      { id:'stressz', cim:'Stressz szint (1-10)', tipus:'szam' },
+    ]
+  },
+
+  // ══ 8. TALÁLKOZÓ ══
+  { het:8, cim:'Hormonok és összefüggések',
+    temak:[
+      'Az elmúlt hét tapasztalatai',
+      'Hormonok és összefüggések',
+      'Pajzsmirigy · petefészek kapcsolata',
+      'Ösztrogén dominancia · progeszteron',
+      'Nőd dolgok',
+    ],
+    hazi_ugyfel:[
+      'Hormon-barát ételek beépítése (brokkoli, lenmag, avokádó)',
+      'Xenoösztrogén forrásainak csökkentése (műanyag, kozmetikum)',
+    ],
+    hazi_konzultans:[
+      'Hormonális tünetek értékelése',
+      'Pajzsmirigy protokoll szükség esetén',
+    ],
+    adatgyujtes:[
+      { id:'suly', cim:'Súly (kg)', tipus:'szam' },
+      { id:'hormon_tunetek', cim:'Hormonális tünetek', tipus:'szoveg' },
+    ]
+  },
+
+  // ══ 9. TALÁLKOZÓ ══
+  { het:9, cim:'Xenoösztrogének és méregtelenítés mélyebb szint',
+    temak:[
+      'Az elmúlt hét tapasztalatai',
+      'Stressz és közösségigények (xenoösztrogének)',
+      'Szépségápolat',
+      'Vegyszerek (xenoösztrogének)',
+      'Személyes testösszetétel',
+      'Vert fakra hatő hormonok',
+    ],
+    hazi_ugyfel:[
+      'Kozmetikumok felülvizsgálata (parabén, SLS kerülése)',
+      'Természetes tisztítószerek használata',
+      'Szűrt víz bevezetése',
+    ],
+    hazi_konzultans:[
+      'Xenoösztrogén terhelés értékelése',
+      'Természetes alternatívák javaslása',
+    ],
+    adatgyujtes:[
+      { id:'suly', cim:'Súly (kg)', tipus:'szam' },
+      { id:'xeno', cim:'Xenoösztrogén forrásai — listázva', tipus:'szoveg' },
+    ]
+  },
+
+  // ══ 10. TALÁLKOZÓ ══
+  { het:10, cim:'Táplálékkiegészítők és személyes protokoll',
+    temak:[
+      'Az elmúlt hét tapasztalatai',
+      'Fogyasztandó (IDA) vitaminok',
+      'Vitaminok, ásványi anyagok',
+      'Probiotikumok, ásványi anyagok',
+      'Táplálékkiegészítők, táplálékkiegészítők',
+    ],
+    hazi_ugyfel:[
+      'Személyre szabott vitamin protokoll véglegesítése',
+      'D3 + K2 + Omega-3 + Magnézium napi szedése',
+    ],
+    hazi_konzultans:[
+      'Vitamin protokoll összehangolása',
+      'Kiegészítők minőségének ellenőrzése',
+    ],
+    adatgyujtes:[
+      { id:'suly', cim:'Súly (kg)', tipus:'szam' },
+      { id:'vitamin_lista', cim:'Szedett vitaminok listája', tipus:'szoveg' },
+    ]
+  },
+
+  // ══ 11. TALÁLKOZÓ ══
+  { het:11, cim:'Program összesítése és lezárás előkészítése',
+    temak:[
+      'Az elmúlt hét tapasztalatai',
+      'Az eddigi emberi összegzése',
+      'Az eddigi elvégzett feladatok összegzése',
+      'Hogyan tarts fenn az eredményeket?',
+      'Hogyan henjük el adatronra?',
+      'Szükség esetén további kérdések megválaszolása',
+      'A felelősségről',
+    ],
+    hazi_ugyfel:[
+      'Összesítő napló írása — mit tanultam?',
+      'Célok újragondolása a 12. hétre',
+    ],
+    hazi_konzultans:[
+      'Összesítő visszajelzés készítése',
+      'Nyereség megállapítása a következő találkozóra',
+      'Zéró nyomtatvány kitöltése',
+      'Következő program javaslata előkészítése',
+      'Zéró toldó (toldó összehasonlítás)',
+      'Köböl toldó (toldó összehasonlítás)',
+    ],
+    adatgyujtes:[
+      { id:'suly', cim:'Súly (kg)', tipus:'szam' },
+      { id:'derek', cim:'Derék (cm)', tipus:'szam' },
+      { id:'csipo', cim:'Csípő (cm)', tipus:'szam' },
+      { id:'mell', cim:'Mell (cm)', tipus:'szam' },
+      { id:'nyereseg', cim:'Nyereség megállapítása', tipus:'szoveg' },
+    ]
+  },
+
+  // ══ 12. TALÁLKOZÓ ══
+  { het:12, cim:'🏆 Program lezárás — ünneplés és továbblépés',
+    temak:[
+      'Teljes 12 hetes program értékelése',
+      'Előtte-utána összehasonlítás (súly, méretek, fotó)',
+      'Zéró nyomtatvány lezárása',
+      'Program zárása · ünneplés',
+      'Köböt 100 (toldó összehasonlítás)',
+      'Következő lépések megbeszélése',
+    ],
+    hazi_ugyfel:[
+      'Program lezárás kérdőív kitöltése',
+      'Visszajelzés és értékelés megosztása',
+      'Következő célok meghatározása',
+    ],
+    hazi_konzultans:[
+      'Oklevél kiadása 🎓',
+      'Előtte-utána fotó összehasonlítás',
+      'Következő program ajánlása',
+      'Zéró és záró toldó összehasonlítás',
+    ],
+    adatgyujtes:[
+      { id:'suly', cim:'Záró súly (kg)', tipus:'szam' },
+      { id:'derek', cim:'Záró derék (cm)', tipus:'szam' },
+      { id:'csipo', cim:'Záró csípő (cm)', tipus:'szam' },
+      { id:'mell', cim:'Záró mell (cm)', tipus:'szam' },
+      { id:'nps', cim:'Elégedettség (1-10)', tipus:'szam' },
+      { id:'visszajelzes', cim:'Szöveges visszajelzés', tipus:'szoveg' },
+      { id:'kovetkezo_program', cim:'Következő program', tipus:'szoveg' },
+    ]
+  },
 ];
 
 let aktualisKonzUgyfelNev = '';
@@ -5623,7 +5889,7 @@ function konzKiemelBetolt() {
 
   // Konzultáns adatok az ügyfélhez rendelve
   const KONZ_ADATOK = {
-    eva:   { nev:'Horváth Éva · konzultáns', emoji:'👩' },
+    eva:   { nev:'Széplábi Éva · fő konzultáns', emoji:'👩' },
     tamas: { nev:'Kiss Tamás · konzultáns',   emoji:'👨' },
     petra: { nev:'Nagy Petra · konzultáns',   emoji:'👩' },
   };
@@ -7731,7 +7997,7 @@ function programZarasBetolt() {
         <div style="text-align:left">
           <div style="font-size:10px;color:#92400e">Konzultáns</div>
           <div style="font-size:12px;font-weight:700;color:#78350f">${
-            {eva:'Horváth Éva',tamas:'Kiss Tamás',petra:'Nagy Petra'}[u.konzultansId||'eva'] || 'Konzultáns'
+            {eva:'Széplábi Éva',tamas:'Kiss Tamás',petra:'Nagy Petra'}[u.konzultansId||'eva'] || 'Konzultáns'
           }</div>
         </div>
         <div style="font-size:28px">🏆</div>
@@ -7914,7 +8180,7 @@ function profilBetolt() {
   if (adatok) adatok.innerHTML = `
     <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--s100)">
       <span style="color:var(--s500)">Konzultáns</span>
-      <strong>${{eva:'Horváth Éva',tamas:'Kiss Tamás',petra:'Nagy Petra'}[u.konzultansId||'eva']||'—'}</strong>
+      <strong>${{eva:'Széplábi Éva',tamas:'Kiss Tamás',petra:'Nagy Petra'}[u.konzultansId||'eva']||'—'}</strong>
     </div>
     <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--s100)">
       <span style="color:var(--s500)">Jelenlegi hét</span>
@@ -8005,83 +8271,144 @@ function konzKilep() {
 }
 
 // ══ CHAT BETÖLTÉS ══
-let chatUzenetek = [
-  { ki:'ai',  nev:'AI Coach 🤖',     szoveg:'Szia! Miben segíthetek? Bármit kérdezhetsz — éjjel-nappal itt vagyok. 💙', ido:'tegnap 23:14' },
-  { ki:'mas', nev:'Horváth Éva 🤝',  szoveg:'Szia Anna! Éva vagyok. Holnap konzultáción is megbeszélhetjük! 😊',          ido:'ma 08:32'     },
-];
+// ══════════════════════════════════════
+// SZEPLÁBI ÉVA AI CHAT
+// ══════════════════════════════════════
+
+let chatUzenetek = [];
+let chatTortenet = [];
+
+const EVA_RENDSZER_UZENET = () => {
+  const u = bejelentkezettUser || {};
+  const prog = u.program || 'eletmod';
+  const het  = u.het || 1;
+  const PROG_NEV = {eletmod:'Életmódváltás (12 hetes)',elotte:'Várandósság előtt (8 hetes)',alatt:'Várandósság alatt (8 hetes)',gyerekágy:'Gyerekágy időszak (12 hetes)'};
+  return `Te Széplábi Éva vagy az Érthetőbb Egészség fő konzultánsa és tulajdonosa.
+Személyes stílusod: meleg, közvetlen, biztató. Úgy beszélsz mint egy jó barát aki egyben szakértő. Nem vagy robot.
+
+ELVEID (soha ne szegd meg):
+- SOHA nem ajánlsz kenyeret, tésztát, rizst, gabonát, glutént, lisztet, müzlit, kekszet
+- SOHA nem ajánlsz kalória számolást, diétát, éhezést
+- SOHA nem ajánlsz margarint, növényi olajat (napraforgó, repce), szóját
+- Mindig ajánlhatsz: húst, halat, tojást, zöldséget, avokádót, diót, görög joghurtot, olívaolajt, vajat, kókuszzsírt
+
+KOMMUNIKÁCIÓ:
+- Mindig magyarul válaszolj
+- Max 4-5 rövid mondat
+- Természetes emojik (de ne túl sok)
+- Néha kérdezz vissza
+- Dicsérd a kis lépéseket is
+- Komoly egészségügyi kérdésnél: ajánld az orvost is
+
+ÜGYFÉL: ${u.nev || 'ismeretlen'} | Program: ${PROG_NEV[prog] || prog} | ${het}. hét`;
+};
+
+const EVA_UDVOZLO = {
+  eletmod:   'Szia! Éva vagyok, a konzultánsod. Gratulálok hogy elindultál az életmódváltáson! Bármit kérdezhetsz — étkezés, receptek, szokások — mind. Miben segíthetek ma? 💙',
+  elotte:    'Szia! Éva vagyok. Nagyon örülök hogy itt vagy — a várandósság előtti felkészülés az egyik legfontosabb dolog amit tehetsz! Miben segíthetek? 💙',
+  alatt:     'Szia kismama! Éva vagyok. Tudod hogy minden kérdéssel fordulhatsz hozzám — éjjel is, ha nem alszol. Mi jár most a fejedben? 💙',
+  gyerekágy: 'Szia! Éva vagyok. Először is — szuper anyuka vagy hogy még ezzel is foglalkozol! A gyerekágy nehéz, de együtt átvészeljük. Miben segíthetek? 💙',
+};
+
+const EVA_GYORS = {
+  eletmod:   ['Mit egyek reggelire?','Mennyi vizet igyak?','Milyen halakat ajánlasz?','Miért vagyok fáradt?'],
+  elotte:    ['Milyen vitamint szedjek?','Mit egyek a termékenységért?','Milyen vérvizsgálat kell?','Hogyan javítsam a ciklusomat?'],
+  alatt:     ['Mit egyek az 1. trimeszterben?','Mi segít a hányinger ellen?','Biztonságos a lazac?','Milyen vitamin kell?'],
+  gyerekágy: ['Mit egyek szoptatás alatt?','Hogyan legyen több energiám?','Hogyan kezeljem az alváshiányt?','Normális hogy így érzem magam?'],
+};
 
 function chatBetolt() {
   const el = document.getElementById('chat-lista');
   if (!el) return;
+  const u = bejelentkezettUser || {};
+  const prog = u.program || 'eletmod';
+  if (chatUzenetek.length === 0) {
+    chatUzenetek.push({ ki:'eva', nev:'Széplábi Éva', szoveg: EVA_UDVOZLO[prog] || EVA_UDVOZLO.eletmod, ido: new Date().toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'}) });
+  }
   el.innerHTML = chatUzenetek.map(u => chatUzenetHTML(u)).join('');
+  if (chatUzenetek.length <= 2) {
+    const kerdesek = EVA_GYORS[prog] || EVA_GYORS.eletmod;
+    const div = document.createElement('div');
+    div.style.cssText = 'padding:4px 0 12px;display:flex;flex-wrap:wrap;gap:7px';
+    div.innerHTML = kerdesek.map(k => `<button onclick="chatGyors('${k.replace(/'/g,"&apos;")}')"
+      style="font-size:12px;padding:7px 13px;border-radius:999px;border:1.5px solid var(--lila-k);
+      background:var(--lila-v);color:var(--lila);cursor:pointer;font-weight:600">${k}</button>`).join('');
+    el.appendChild(div);
+  }
   el.scrollTop = el.scrollHeight;
 }
 
-function chatUzenetHTML(u) {
-  const en = u.ki === 'en';
-  const aiSzin   = 'linear-gradient(135deg,var(--lila-v),#ede9fe)';
-  const konzSzin = 'var(--kek-v)';
-  const enSzin   = 'var(--kek)';
-  let hatter, szovegSzin, igazitas;
-  if (en) { hatter = enSzin; szovegSzin = 'white'; igazitas = 'flex-end'; }
-  else if (u.ki === 'ai') { hatter = aiSzin; szovegSzin = 'var(--s900)'; igazitas = 'flex-start'; }
-  else { hatter = konzSzin; szovegSzin = 'var(--s900)'; igazitas = 'flex-start'; }
-
-  return `<div style="display:flex;justify-content:${igazitas};margin-bottom:14px">
-    <div style="max-width:82%">
-      ${!en ? `<div style="font-size:10px;font-weight:700;color:var(--s500);margin-bottom:4px;padding-left:4px">${u.nev}</div>` : ''}
-      <div style="background:${hatter};color:${szovegSzin};padding:11px 14px;border-radius:${en?'14px 4px 14px 14px':'4px 14px 14px 14px'};
-        font-size:14px;line-height:1.55;${u.ki==='ai'?'border:1.5px solid var(--lila-k)':''}${u.ki==='mas'?'border:1.5px solid var(--kek-k)':''}
-        white-space:pre-line">${u.szoveg}</div>
-      <div style="font-size:10px;color:var(--s400);margin-top:3px;padding:0 4px;text-align:${en?'right':'left'}">${u.ido}</div>
+function chatUzenetHTML(m) {
+  const en  = m.ki === 'en';
+  const ido = m.ido || new Date().toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'});
+  const igazit = en ? 'flex-end' : 'flex-start';
+  const hatter  = en ? 'var(--kek)' : 'white';
+  const szovSzin= en ? 'white' : 'var(--s900)';
+  const border  = en ? '' : 'border:1.5px solid var(--s200);box-shadow:0 1px 4px rgba(0,0,0,.06)';
+  const radius  = en ? '14px 4px 14px 14px' : '4px 14px 14px 14px';
+  const avatar  = en
+    ? `<div style="width:32px;height:32px;border-radius:50%;background:var(--kek-v);border:1.5px solid var(--kek-k);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;align-self:flex-end">${(bejelentkezettUser?.nev||'T')[0]}</div>`
+    : `<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--kek),var(--lila));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;align-self:flex-end">👩</div>`;
+  return `<div style="display:flex;justify-content:${igazit};margin-bottom:12px;gap:8px;align-items:flex-end">
+    ${!en ? avatar : ''}
+    <div style="max-width:78%">
+      ${!en ? `<div style="font-size:10px;font-weight:700;color:var(--lila);margin-bottom:4px">${m.nev}</div>` : ''}
+      <div style="background:${hatter};color:${szovSzin};padding:11px 14px;border-radius:${radius};font-size:14px;line-height:1.6;${border};white-space:pre-line">${m.szoveg}</div>
+      <div style="font-size:10px;color:var(--s400);margin-top:3px;padding:0 4px;text-align:${en?'right':'left'}">${ido}</div>
     </div>
+    ${en ? avatar : ''}
   </div>`;
 }
 
-async function chatKuld() {
+function chatGyors(kerdes) {
   const inp = document.getElementById('chat-input');
+  if (inp) { inp.value = kerdes; chatKuld(); }
+}
+
+async function chatKuld() {
+  const inp   = document.getElementById('chat-input');
   const szoveg = inp?.value.trim();
   if (!szoveg) return;
-  inp.value = '';
-
-  // Ügyfél üzenete
-  chatUzenetek.push({ ki:'en', nev:'Te', szoveg, ido:'most' });
+  inp.value = ''; chatResize(inp);
+  const ido = new Date().toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'});
+  chatUzenetek.push({ ki:'en', nev:'Te', szoveg, ido });
+  chatTortenet.push({ role:'user', content: szoveg });
   chatBetolt();
-
-  // Gépelés jelző
   const gep = document.getElementById('chat-gepeles');
+  const gepSz = document.querySelector('#chat-gepeles span');
   if (gep) gep.style.display = 'flex';
-
-  setTimeout(async () => {
-    try {
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 400,
-          system: `Te az Érthetőbb Egészség platform barátságos AI Coach-a vagy. Röviden, barátságosan, magyarul válaszolj (max 3-4 mondat).
-Elvek:
-- Modern táplálkozástudományon alapulsz — SOHA nem ajánlsz kalória-számolást vagy diétázást
-- SOHA nem ajánlsz kenyeret, tésztát, lisztet, gabonaterméket, gluténtartalmú ételt
-- Mindig ajánlhatsz: húst, halat, tojást, zöldségeket, gyümölcsöt, avokádót, olajos magvakat, görög joghurtot, olívaolajt, vajat, kókuszolajat
-- Légy biztató és soha nem ítélkező — az ügyfél döntéseit tiszteld
-- Ha komoly egészségügyi kérdés merül fel, irányítsd a személyes konzultánshoz
-Program: ${bejelentkezettUser?.program || 'életmód'} | Neve: ${bejelentkezettUser?.nev || 'ismeretlen'}`,
-          messages: [{ role: 'user', content: szoveg }]
-        })
-      });
-      const data = await resp.json();
-      const valasz = data.content?.[0]?.text || 'Sajnos most nem tudok válaszolni. Írj a konzultánsodnak! 💙';
-      chatUzenetek.push({ ki:'ai', nev:'AI Coach 🤖', szoveg: valasz, ido: 'most' });
-    } catch(e) {
-      chatUzenetek.push({ ki:'ai', nev:'AI Coach 🤖', szoveg: 'Hálózati probléma. Próbáld újra, vagy kérdezd a konzultánsodat! 💙', ido: 'most' });
-    }
-    if (gep) gep.style.display = 'none';
-    chatBetolt();
-    const lista = document.getElementById('chat-lista');
-    if (lista) lista.scrollTop = lista.scrollHeight;
-  }, 1000);
+  if (gepSz) gepSz.textContent = 'Éva gépel...';
+  const apiKey = localStorage.getItem('claude_api_key');
+  await new Promise(r => setTimeout(r, 800 + Math.random() * 600));
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey || '',
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 500,
+        system: EVA_RENDSZER_UZENET(),
+        messages: chatTortenet.slice(-10),
+      })
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error.message);
+    const valasz = data.content?.[0]?.text || 'Most nem tudok válaszolni — próbáld újra! 💙';
+    chatTortenet.push({ role:'assistant', content: valasz });
+    chatUzenetek.push({ ki:'eva', nev:'Széplábi Éva', szoveg: valasz, ido: new Date().toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'}) });
+  } catch(e) {
+    const fallback = ['Most épp lassú a kapcsolat — próbáld újra! 💙','A kérdésedet a következő konzultáción megbeszéljük! 💙','Sajnos most nem érek el — de holnap minden kérdésre válaszolok! 💙'];
+    chatUzenetek.push({ ki:'eva', nev:'Széplábi Éva', szoveg: fallback[Math.floor(Math.random()*3)], ido: new Date().toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'}) });
+  }
+  if (gep) gep.style.display = 'none';
+  chatBetolt();
+  const lista = document.getElementById('chat-lista');
+  if (lista) lista.scrollTop = lista.scrollHeight;
 }
 
 function chatEnter(e) {
@@ -9171,7 +9498,7 @@ function napValaszt(el, nap) {
 // Ügyfél profilok tárolása
 // ══ KONZULTÁNSOK ══
 const KONZULTANSOK = [
-  { id:'eva',   nev:'Horváth Éva',  szin:'var(--kek)',  bg:'var(--kek-v)',  emoji:'👩', programok:['eletmod','elotte','alatt','gyerekágy'] },
+  { id:'eva',   nev:'Széplábi Éva',  szin:'var(--kek)',  bg:'var(--kek-v)',  emoji:'👩', programok:['eletmod','elotte','alatt','gyerekágy'] },
   { id:'tamas', nev:'Kiss Tamás',   szin:'var(--lila)', bg:'var(--lila-v)', emoji:'👨', programok:['eletmod'] },
   { id:'petra', nev:'Nagy Petra',   szin:'var(--rozsa)',bg:'var(--rozsa-v)',emoji:'👩', programok:['elotte','alatt','gyerekágy'] },
 ];
