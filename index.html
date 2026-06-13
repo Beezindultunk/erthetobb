@@ -203,9 +203,12 @@ button{cursor:pointer;font-family:inherit;border:none;background:none}
         <span class="snyil" style="color:var(--kek)">›</span>
       </button>
 
-      <button class="sor" onclick="toast('⚙️ Értesítések beállítása hamarosan...')">
-        <div class="si" style="background:var(--kek-v)">🔔</div>
-        <div class="sinfo"><div class="scim">Értesítések</div><div class="sal">Push értesítések kezelése</div></div>
+      <button class="sor" onclick="pushProfilToggle()" id="push-profil-btn">
+        <div class="si" style="background:var(--kek-v)" id="push-profil-ikon">🔔</div>
+        <div class="sinfo">
+          <div class="scim" id="push-profil-cim">Értesítések</div>
+          <div class="sal" id="push-profil-al">Napi emlékeztetők bekapcsolása</div>
+        </div>
         <span class="snyil">›</span>
       </button>
 
@@ -405,7 +408,10 @@ button{cursor:pointer;font-family:inherit;border:none;background:none}
     <div class="ugyfel-stats">
       <div class="ustat"><div class="ustat-szam" id="u-sorozat-szam">🔥 0</div><div class="ustat-nev">sorozat</div></div>
       <div class="ustat"><div class="ustat-szam" id="u-hf-szam">82%</div><div class="ustat-nev">HF</div></div>
-      <div class="ustat"><div class="ustat-szam" id="u-suly-szam">−1.8kg</div><div class="ustat-nev">fogytam</div></div>
+      <div class="ustat" onclick="oldal('o-merfoldk')" style="cursor:pointer">
+        <div class="ustat-szam" id="pont-badge" style="color:var(--sarga)">⭐ 0</div>
+        <div class="ustat-nev">pont</div>
+      </div>
     </div>
   </div>
 
@@ -3045,7 +3051,7 @@ function regValaszt(id, ertek, tip) {
   regLepRender(2);
 }
 
-function regKerdKov() {
+async function regKerdKov() {
   // Szöveg mentése
   const szEl = document.getElementById('reg-szoveg-input');
   const kerdesek = PROG_KERDOIV[regAdatok.program] || [];
@@ -3053,17 +3059,45 @@ function regKerdKov() {
   if (szEl && ker) regKerdoivValaszok[ker.id] = szEl.value;
 
   if (regKerdoivIdx >= kerdesek.length - 1) {
-    // Kész — regisztráció befejezése
+    // ── Demo módba is mentés ──
     DEMO_FELHASZANALOK[regAdatok.email] = {
       jelszo:    regAdatok.jelszo,
       szerep:    'ugyfel',
       nev:       regAdatok.nev,
       program:   regAdatok.program,
       konzultans:'eva',
+      konzultansId:'eva',
       het:       1,
       hf:        0,
       kerdoiv:   { ...regKerdoivValaszok },
     };
+
+    // ── Airtable mentés ──
+    toast('📤 Regisztráció mentése...', 'z');
+    const atSiker = await ujUgyfelMentAT({
+      nev:       regAdatok.nev,
+      email:     regAdatok.email,
+      jelszo:    regAdatok.jelszo,
+      program:   regAdatok.program,
+      telefon:   regAdatok.telefon || '',
+      szulev:    regAdatok.szulev || '',
+      konzultans:'eva',
+    });
+
+    if (atSiker) {
+      toast('✅ Regisztráció sikeres!', 'z');
+      // ── Email értesítés Évának ──
+      emailErtesitesKuld({
+        tipas: 'uj_ugyfel',
+        ugyfelNev: regAdatok.nev,
+        ugyfelEmail: regAdatok.email,
+        program: regAdatok.program,
+        konzultansEmail: 'eva@erthetobbegeszseg.hu',
+      });
+    } else {
+      toast('⚠️ Mentés részben sikeres — konzultáns értesítve', 'z');
+    }
+
     regLepRender(3);
   } else {
     regKerdoivIdx++;
@@ -3167,6 +3201,37 @@ function ugyfelFoOldalFrissit() {
   setTimeout(konzKiemelBetoltAT, 600);
   setTimeout(progSpecGombok, 200);
   setTimeout(kvizBadgeFrissit, 250);
+  setTimeout(hetLepteto, 1500); // Automatikus hétléptető
+  setTimeout(pontNapi, 2000); // Napi belépési pont
+  // Push értesítés kérés (első belépésnél)
+  if (!localStorage.getItem('push_kerdes_latszott')) {
+    setTimeout(pushKerdes, 5000);
+    localStorage.setItem('push_kerdes_latszott', '1');
+  }
+}
+
+function pushKerdes() {
+  // Kedves kérés az ügyfélnek
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:white;border-radius:16px;padding:16px 20px;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:9990;width:90%;max-width:340px;border:1.5px solid var(--kek-k)';
+  el.innerHTML = `
+    <div style="font-size:22px;margin-bottom:8px">🔔</div>
+    <div style="font-size:14px;font-weight:800;color:var(--s900);margin-bottom:6px">Napi emlékeztetők</div>
+    <div style="font-size:13px;color:var(--s600);line-height:1.5;margin-bottom:14px">
+      Küldhetünk reggeli és esti emlékeztetőt a naplóhoz és vitaminokhoz?
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="pushAktival();this.closest('[style*=fixed]').remove()"
+        style="flex:1;padding:10px;border-radius:9px;background:var(--kek);color:white;border:none;font-size:13px;font-weight:700;cursor:pointer">
+        Igen, kérem! 💙
+      </button>
+      <button onclick="this.closest('[style*=fixed]').remove()"
+        style="flex:1;padding:10px;border-radius:9px;background:var(--s100);color:var(--s600);border:none;font-size:13px;cursor:pointer">
+        Nem most
+      </button>
+    </div>`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 10000);
 }
 
 function progSpecGombok() {
@@ -3281,119 +3346,200 @@ function hetiBannerFrissit() {
 const LECKEK = {
 
   eletmod: [
-    {
-      nap: 1,
-      cim: 'Miért nem a kalória a lényeg?',
-      emoji: '🧠',
-      szin: 'var(--zold)',
-      bg: 'var(--zold-v)',
-      bevezeto: 'Valószínűleg hallottad már százszor: "Kevesebbet egyél, többet mozogj." De ha ez ilyen egyszerű lenne, miért nem működik sokaknak?',
-      pontok: [
-        { ikon:'🔬', szoveg:'Egy tányér tojás és egy croissant — kalóriában lehet ugyanannyi, de teljesen más hormonális választ váltanak ki. Az egyikkel stabilan jutsz végig a délelőttön, a másikkal 2 óra múlva újra éhes vagy.' },
-        { ikon:'⚡', szoveg:'A fehérje és zsír lassan szívódik fel — stabil energiát ad. A finomított szénhidrát és cukor gyors vércukor-emelkedést okoz, amit energiazuhanás követ.' },
-        { ikon:'🎯', szoveg:'A célunk: olyan ételeket enni, amik stabilizálják a vércukrot, csökkentik a gyulladást, és támogatják a hormonális egyensúlyt.' },
-      ],
-      kerdes: 'Te mikor érzel energiazuhanást napközben?',
-      valaszok: ['Délelőtt 10-11 körül', 'Ebéd után', 'Délután 3-4 körül', 'Este'],
-      zaras: 'Ez az az időpont ahol érdemes megnézni mit ettél előtte. Holnap folytatjuk — mi jön a fehérjéről. 💙',
-    },
-    {
-      nap: 2,
-      cim: 'A reggeli fehérje szabály',
-      emoji: '🥚',
-      szin: 'var(--zold)',
-      bg: 'var(--zold-v)',
-      bevezeto: 'Az egyik legegyszerűbb dolog amit tehetsz az egészségedért: fehérjével kezdeni a napot az ébredés utáni 30-60 percben.',
-      pontok: [
-        { ikon:'🔋', szoveg:'A fehérjés reggeli stabilizálja a kortizolszintet — ez az a hormon ami reggel természetesen magas és felelős az ébredésért.' },
-        { ikon:'🍳', szoveg:'2-3 tojás, görög joghurt, lazac, avokádóval kiegészítve — ezek mind kiváló választások. Kb. 25-30g fehérje a reggelin.' },
-        { ikon:'⏰', szoveg:'Kísérlet: próbáld ki 5 napig. A legtöbben már az első héten kevesebb éhséget és több energiát jeleznek.' },
-      ],
-      kerdes: 'Mi szokott lenni a reggeli étkezésed?',
-      valaszok: ['Általában kihagyom', 'Kávé és egy kis édesség', 'Görög joghurt vagy gyümölcs', 'Tojás/fehérjedús étel'],
-      zaras: 'Ha most még nem a fehérje az alapod reggel — ne aggódj, ezen fogunk változtatni. Lassan, fokozatosan. 💙',
-    },
-    {
-      nap: 3,
-      cim: 'A gyulladás és az étrend kapcsolata',
-      emoji: '🔥',
-      szin: 'var(--piros)',
-      bg: 'var(--piros-v)',
-      bevezeto: 'A krónikus, alacsony szintű gyulladás áll a legtöbb modern betegség hátterében — ízületi fájdalomtól a fáradtságig. És az étrendünk az egyik legnagyobb befolyásolója.',
-      pontok: [
-        { ikon:'⬆️', szoveg:'Gyulladáskeltő ételek: növényi olajok (napraforgó, repce), cukor, feldolgozott élelmiszerek, búza és glutén.' },
-        { ikon:'⬇️', szoveg:'Gyulladáscsökkentő ételek: zsíros hal (lazac, makréla, szardínia), olívaolaj, avokádó, zöldségek, bogyós gyümölcsök.' },
-        { ikon:'💡', szoveg:'Nem kell tökéletesnek lenni — ha az ételed 80%-a igazi, feldolgozatlan étel, a szervezeted meg tudja kezelni a többit.' },
-      ],
-      kerdes: 'Milyen panaszaid vannak amik krónikus gyulladásra utalhatnak?',
-      valaszok: ['Állandó fáradtság', 'Ízületi/izomfájdalom', 'Bőrproblémák', 'Nincs különösebb panaszom'],
-      zaras: 'Ha jelöltél valamit — nagy eséllyel az étrenddel is tudunk rajta segíteni. Holnap az alvásról lesz szó. 💙',
-    },
-    {
-      nap: 4,
-      cim: 'Az alvás és az étvágy titkos kapcsolata',
-      emoji: '😴',
-      szin: 'var(--lila)',
-      bg: 'var(--lila-v)',
-      bevezeto: 'Tudtad hogy egyetlen rossz éjszaka alvás után másnap átlagosan 300 kcal-lal többet eszel — és főleg cukros, szénhidrátos ételeket kívánsz?',
-      pontok: [
-        { ikon:'🧬', szoveg:'Az alváshiány megnöveli a ghrelin (éhséghormon) szintjét és csökkenti a leptint (telítettség hormon). Az agyad élelemért fog kiabálni.' },
-        { ikon:'🌙', szoveg:'7-8 óra alvás az arany standard. De a minőség is számít — sötét szoba, 18-19°C, telefon nem az ágyon.' },
-        { ikon:'🍽️', szoveg:'Vacsora 20:00 előtt, és ne egyél 2-3 órával lefekvés előtt — ez jelentősen javítja az alvás minőségét.' },
-      ],
-      kerdes: 'Átlagosan mennyit alszol?',
-      valaszok: ['5 óra alatt', '5-6 óra', '6-7 óra', '7+ óra'],
-      zaras: 'Az alvás az a "szupererő" amiről mindenki megfeledkezik. Ha az étrendeden dolgozunk, az alvásra is figyelünk majd. 💙',
-    },
-    {
-      nap: 5,
-      cim: 'A víz mint teljesítmény-növelő',
-      emoji: '💧',
-      szin: 'var(--kek)',
-      bg: 'var(--kek-v)',
-      bevezeto: 'Az enyhe kiszáradás — már 1-2%-os folyadékveszteség — 20%-kal csökkenti a kognitív teljesítményt és energiaszintet. Sok "éhségérzet" valójában szomjúság.',
-      pontok: [
-        { ikon:'🧪', szoveg:'A szervezet nem tud különbséget tenni éhség és szomjúság között. Ha 30 perccel étkezés előtt iszol egy pohár vizet, természetesen kevesebbet eszel.' },
-        { ikon:'📏', szoveg:'Cél: testsúly (kg) × 0.033 = napi liternyi víz. Egy 70 kg-os embernél ez kb. 2.3 liter.' },
-        { ikon:'⏰', szoveg:'Trükk: tartsd az asztalon/konyhapulton a vizesüveget. Ami szem előtt van, azt iszod. Ami el van rejtve, azt nem.' },
-      ],
-      kerdes: 'Hogyan érzed magad napközben?',
-      valaszok: ['Folyton fáradt vagyok', 'Nehezen koncentrálok', 'Fejfájások vannak', 'Általában jól érzem magam'],
-      zaras: 'Ha bármelyiket jelölted — valószínűleg a vízfogyasztáson is van mit javítani. Holnap a zsírokról tanulunk. 💙',
-    },
-    {
-      nap: 6,
-      cim: 'A jó zsírok rehabilitációja',
-      emoji: '🥑',
-      szin: 'var(--zold)',
-      bg: 'var(--zold-v)',
-      bevezeto: 'Az elmúlt 50 évben azt mondták nekünk, hogy a zsír az ellenség. Most tudjuk: a természetes zsírok nélkülözhetetlenek — és a megfelelő zsírok fogyasztása SEGÍT a fogyásban.',
-      pontok: [
-        { ikon:'🧠', szoveg:'Az agyunk 60%-ban zsírból áll. Az omega-3 zsírsavak — lazacban, dióban, lenmagban — kritikusak a mentális egészséghez és a gyulladás csökkentéséhez.' },
-        { ikon:'✅', szoveg:'Jó zsírok: olívaolaj, avokádó, vaj (legelőn tartott tehénből), kókuszolaj, dió, mandula, tojás, zsíros hal.' },
-        { ikon:'❌', szoveg:'Kerülendő: növényi olajok (napraforgó, szójaolaj, repceolaj) — ezek iparilag feldolgozottak és gyulladáskeltők.' },
-      ],
-      kerdes: 'Milyen zsírokat használsz főzéshez?',
-      valaszok: ['Napraforgóolaj', 'Olivaolaj', 'Vaj/kókuszolaj', 'Vegyes'],
-      zaras: 'Cseréld le fokozatosan a növényi olajokat olívára és vajra. Ez az egyik legnagyobb hatású változtatás. 💙',
-    },
-    {
-      nap: 7,
-      cim: 'Az első hét összefoglalója',
-      emoji: '🎉',
-      szin: 'var(--narancs)',
-      bg: 'var(--narancs-v)',
-      bevezeto: 'Gratulálok — végigjártál egy teljes hetet! Nézzük meg mire jutottunk.',
-      pontok: [
-        { ikon:'🧠', szoveg:'Nem a kalória számít, hanem az ételek minősége és hatása a tested hormonjaira.' },
-        { ikon:'🥚', szoveg:'Fehérjés reggeli = stabil energia egész nap.' },
-        { ikon:'😴', szoveg:'Az alvás és a víz ugyanolyan fontos mint az étkezés.' },
-        { ikon:'🥑', szoveg:'A természetes zsírok barátok, nem ellenségek.' },
-      ],
-      kerdes: 'Melyik volt számodra a leghasznosabb lecke?',
-      valaszok: ['A kalória mítosz', 'A reggeli fehérje', 'A gyulladás', 'Az alvás/víz/zsírok'],
-      zaras: 'A konzultánsod látja a válaszaidat és személyre szabja a következő heteket. Szép munka! 🌟',
-    },
+    // ══ 1. HÉT: ALAPOK ══
+    { nap:1, het:1, cim:'Miért nem a kalória a lényeg?', emoji:'🧠', szin:'var(--zold)', bg:'var(--zold-v)',
+      bevezeto:'Valószínűleg hallottad már százszor: kevesebbet egyél, többet mozogj. De ha ez ilyen egyszerű lenne, miért nem működik sokaknak?',
+      pontok:[
+        {ikon:'🔬', szoveg:'Egy tányér tojás és egy croissant — kalóriában lehet ugyanannyi, de teljesen más hormonális választ váltanak ki.'},
+        {ikon:'⚡', szoveg:'A fehérje és zsír lassan szívódik fel, stabil energiát ad. A finomított szénhidrát gyors vércukor-emelkedést okoz, amit zuhanás követ.'},
+        {ikon:'🎯', szoveg:'A célunk: olyan ételeket enni, amik stabilizálják a vércukrot, csökkentik a gyulladást és támogatják a hormonális egyensúlyt.'},
+      ], kerdes:'Mikor érzel energiazuhanást napközben?', valaszok:['Délelőtt 10-11 körül','Ebéd után','Délután 3-4 körül','Este'],
+      zaras:'Ez az időpont ahol érdemes megnézni mit ettél előtte. Holnap a fehérjéről lesz szó! 💙' },
+
+    { nap:2, het:1, cim:'A reggeli fehérje szabály', emoji:'🥚', szin:'var(--zold)', bg:'var(--zold-v)',
+      bevezeto:'Az egyik legegyszerűbb dolog amit tehetsz az egészségedért: fehérjével kezdeni a napot az ébredés utáni 30-60 percben.',
+      pontok:[
+        {ikon:'🔋', szoveg:'A fehérjés reggeli stabilizálja a kortizolszintet — ez a hormon reggel természetesen magas és felelős az ébredésért.'},
+        {ikon:'🍳', szoveg:'2-3 tojás, görög joghurt, lazac avokádóval — kb. 25-30g fehérje reggel. Ez a célod!'},
+        {ikon:'⏰', szoveg:'Próbáld ki 5 napig. A legtöbben már az első héten kevesebb éhséget és több energiát jeleznek.'},
+      ], kerdes:'Mi szokott lenni a reggeli étkezésed?', valaszok:['Általában kihagyom','Kávé és édesség','Joghurt vagy gyümölcs','Tojás vagy fehérjedús étel'],
+      zaras:'Ha most még nem fehérje az alap reggel — lassan, fokozatosan változtatjuk. 💙' },
+
+    { nap:3, het:1, cim:'A gyulladás és az étrend kapcsolata', emoji:'🔥', szin:'var(--piros)', bg:'var(--piros-v)',
+      bevezeto:'A krónikus alacsony szintű gyulladás áll a legtöbb modern betegség hátterében. Az étrendünk az egyik legnagyobb befolyásolója.',
+      pontok:[
+        {ikon:'⬆️', szoveg:'Gyulladáskeltő ételek: növényi olajok (napraforgó, repce), cukor, feldolgozott ételek, búza és glutén.'},
+        {ikon:'⬇️', szoveg:'Gyulladáscsökkentő ételek: zsíros hal (lazac, makréla), olívaolaj, avokádó, zöldségek, bogyós gyümölcsök.'},
+        {ikon:'💡', szoveg:'Ha az ételed 80%-a igazi feldolgozatlan étel — a szervezeted meg tudja kezelni a többit.'},
+      ], kerdes:'Van valami panaszod ami krónikus gyulladásra utalhat?', valaszok:['Állandó fáradtság','Ízületi vagy izomfájdalom','Bőrproblémák','Nincs különösebb panaszom'],
+      zaras:'Ha jelöltél valamit — nagy eséllyel az étrenddel is tudunk rajta segíteni. 💙' },
+
+    { nap:4, het:1, cim:'Az alvás és az étvágy titkos kapcsolata', emoji:'😴', szin:'var(--lila)', bg:'var(--lila-v)',
+      bevezeto:'Tudtad hogy egyetlen rossz éjszaka után másnap átlagosan sokkal többet eszel — főleg cukros, szénhidrátos ételeket?',
+      pontok:[
+        {ikon:'🧬', szoveg:'Az alváshiány megnöveli a ghrelin (éhséghormon) szintjét és csökkenti a leptint (telítettség hormon).'},
+        {ikon:'🌙', szoveg:'7-8 óra alvás az arany standard. Sötét szoba, 18-19 fok, telefon nem az ágyon.'},
+        {ikon:'🍽️', szoveg:'Vacsora 20:00 előtt, és ne egyél 2-3 órával lefekvés előtt — ez javítja az alvás minőségét.'},
+      ], kerdes:'Átlagosan mennyit alszol?', valaszok:['5 óra alatt','5-6 óra','6-7 óra','7 óra fölött'],
+      zaras:'Az alvás az a szupererő amiről mindenki megfeledkezik. Erre is figyelünk együtt! 💙' },
+
+    { nap:5, het:1, cim:'A víz mint teljesítmény-növelő', emoji:'💧', szin:'var(--kek)', bg:'var(--kek-v)',
+      bevezeto:'Az enyhe kiszáradás — már 1-2%-os folyadékveszteség — jelentősen csökkenti a kognitív teljesítményt. Sok éhségérzet valójában szomjúság!',
+      pontok:[
+        {ikon:'🧪', szoveg:'A szervezet nem tud különbséget tenni éhség és szomjúság között. Egy pohár víz étkezés előtt 30 perccel segít.'},
+        {ikon:'📏', szoveg:'Cél: testsúly (kg) szorozva 0.033 = napi liter. Egy 65 kg-os embernél ez kb. 2.1 liter.'},
+        {ikon:'⏰', szoveg:'Trükk: tartsd szem előtt a vizesüveget. Ami látható, azt iszod. Ami el van rejtve, azt nem.'},
+      ], kerdes:'Mennyit szoktál inni naponta?', valaszok:['Alig iszom','1 liter alatt','1-2 liter','2 liter fölött'],
+      zaras:'Ha most keveset iszol — holnaptól próbáld reggel elsőként meginni egy nagy pohár vizet. 💙' },
+
+    { nap:6, het:1, cim:'A bélflóra — a második agyad', emoji:'🦠', szin:'var(--zold)', bg:'var(--zold-v)',
+      bevezeto:'A bélrendszeredben több baktérium él mint ahány sejt van a testedben. Ezek befolyásolják az immunrendszert, a hangulatot és az anyagcserét.',
+      pontok:[
+        {ikon:'🧬', szoveg:'A bélflóra egészségét a rosttartalmú ételek és fermentált élelmiszerek támogatják: kefir, savanyú káposzta, kovászos uborka.'},
+        {ikon:'⚠️', szoveg:'A bélflórát károsítja: antibiotikum, cukor, feldolgozott élelmiszerek és stressz.'},
+        {ikon:'🥗', szoveg:'Cél: naponta legalább 5-féle zöldség vagy gyümölcs — minél több szín, annál jobb a bélflórának.'},
+      ], kerdes:'Szoktál fermentált ételeket enni?', valaszok:['Sosem','Ritkán','Hetente többször','Minden nap'],
+      zaras:'A kefir és savanyú káposzta az egyik legolcsóbb és leghatásosabb bélflóra-támogató. 💙' },
+
+    { nap:7, het:1, cim:'1. hét összefoglalója 🌟', emoji:'🌟', szin:'var(--narancs)', bg:'var(--narancs-v)',
+      bevezeto:'Gratulálunk az első héthez! Nézzük át mit tanultál — és menj kvízt csinálni, mert pontok várnak!',
+      pontok:[
+        {ikon:'✅', szoveg:'Kalória helyett élelmiszer minőség — a hormonális válasz számít, nem a szám.'},
+        {ikon:'✅', szoveg:'Reggeli fehérje — az ébredés utáni 30-60 percben fehérjével kezdeni a napot.'},
+        {ikon:'✅', szoveg:'Gyulladáscsökkentő étrend — természetes ételek, zsíros halak, olívaolaj.'},
+        {ikon:'✅', szoveg:'Alvás és víz — a két legelfeledettebb egészségi alappillér.'},
+      ], kerdes:'Mi volt az ami a legjobban meglepett ezen a héten?', valaszok:['A fehérje szerepe','A víz hatása','A gyulladás és étrend','Az alvás és étvágy kapcsolata'],
+      zaras:'2. héten jönnek a zsírok, omega-3 és a zöldségek világa. 💙' },
+
+    // ══ 2. HÉT: ZSÍROK, OMEGA, FEHÉRJE ══
+    { nap:8, het:2, cim:'Zöldségek — mennyi és melyik?', emoji:'🥦', szin:'var(--zold)', bg:'var(--zold-v)',
+      bevezeto:'A zöldségek a táplálkozás alapjai — rostot, vitaminokat, ásványi anyagokat és antioxidánsokat adnak.',
+      pontok:[
+        {ikon:'🌈', szoveg:'Minél több szín a tányérodon, annál több féle antioxidánst viszel be. Cél: 5-7 féle zöldség naponta.'},
+        {ikon:'🥬', szoveg:'Legjobb választások: brokkoli, karfiol, spenót, kelkáposzta, paprika, cukkini, padlizsán.'},
+        {ikon:'⚠️', szoveg:'Keményítős zöldségek (burgonya, kukorica) vércukrot emelnek — mértékkel fogyaszd őket.'},
+      ], kerdes:'Átlagosan hány féle zöldséget eszel naponta?', valaszok:['1-2 féle','3-4 féle','5-6 féle','7 fölött'],
+      zaras:'Adj hozzá naponta egy marék spenótot vagy egy szelet paprikát. Apró lépések! 💙' },
+
+    { nap:9, het:2, cim:'Gyümölcsök — a természet édessége', emoji:'🍓', szin:'var(--rozsa)', bg:'var(--rozsa-v)',
+      bevezeto:'A gyümölcsök egészségesek — de a fruktóz is cukor, amit a máj dolgoz fel. Mértékkel és okosan!',
+      pontok:[
+        {ikon:'🍓', szoveg:'Legjobb választások: bogyós gyümölcsök (eper, málna, áfonya) — alacsony fruktóz, magas antioxidáns.'},
+        {ikon:'⏰', szoveg:'Legjobb időpont: reggel, mozgás előtt vagy után. Este már ne egyél gyümölcsöt.'},
+        {ikon:'🚫', szoveg:'Kerülendő: gyümölcslevek (rengeteg cukor, nincs rost), aszalt gyümölcsök nagy mennyiségben.'},
+      ], kerdes:'Mikor szoktál gyümölcsöt enni?', valaszok:['Reggel','Ebéd után','Uzsonnára','Bármikor'],
+      zaras:'A bogyós gyümölcsök a legjobbak — fagyasztva télen is elérhetők! 💙' },
+
+    { nap:10, het:2, cim:'A jó zsírok titka', emoji:'🥑', szin:'var(--sarga)', bg:'var(--sarga-v)',
+      bevezeto:'Évtizedekig azt mondták hogy a zsír az ellenség. Mára tudjuk: a jó zsírok elengedhetetlenek a hormontermeléshez és az agyműködéshez.',
+      pontok:[
+        {ikon:'✅', szoveg:'Jó zsírok: olívaolaj, avokádó, vaj, kókuszzsír, olajos magvak, zsíros hal.'},
+        {ikon:'🚫', szoveg:'Kerülendő: napraforgóolaj, repceolaj, margarin, hidrogénezett növényi zsírok.'},
+        {ikon:'🧠', szoveg:'Az agy 60%-a zsírból áll — elsősorban DHA omega-3-ból. A zsír az agyad üzemanyaga!'},
+      ], kerdes:'Milyen olajjal főzöl leggyakrabban?', valaszok:['Napraforgóolaj','Olívaolaj','Vaj vagy kókuszzsír','Vegyes'],
+      zaras:'A napraforgóolajat cseréld le olívaolajra vagy vajra — ez az egyik legfontosabb változtatás! 💙' },
+
+    { nap:11, het:2, cim:'Omega-3 vs Omega-6 — az arány a kulcs', emoji:'🐟', szin:'var(--kek)', bg:'var(--kek-v)',
+      bevezeto:'Az Omega-3 és Omega-6 zsírsavak egyensúlya meghatározza a szervezetünk gyulladásos állapotát. A modern étrendben ez az arány drasztikusan eltolódott.',
+      pontok:[
+        {ikon:'⚖️', szoveg:'Ideális arány: 1:1 - 1:4. A modern étrendben ez sokszor 1:20 vagy rosszabb — ez krónikus gyulladást okoz.'},
+        {ikon:'🐟', szoveg:'Omega-3 források: lazac, makréla, szardínia, hering (hetente 2-3x), chia mag, lenmag, dió.'},
+        {ikon:'📉', szoveg:'Omega-6 csökkentéséhez: kerüld a növényi olajokat és a feldolgozott élelmiszereket.'},
+      ], kerdes:'Milyen gyakran eszel zsíros halat?', valaszok:['Sosem','Havonta egyszer','Kéthetente','Hetente többször'],
+      zaras:'Heti 2-3 adag zsíros hal az egyik legjobb befektetés az egészségedbe. 💙' },
+
+    { nap:12, het:2, cim:'Fehérje mennyisége — mennyi kell valójában?', emoji:'💪', szin:'var(--zold)', bg:'var(--zold-v)',
+      bevezeto:'A fehérje a szervezet építőköve — izmok, enzimek, hormonok, immunsejtek mind fehérjéből épülnek. De mennyi kell valójában?',
+      pontok:[
+        {ikon:'📊', szoveg:'Általános cél: testsúly (kg) szorozva 1.2-1.6g fehérje naponta. Egy 65 kg-os embernél ez 78-104g.'},
+        {ikon:'🥩', szoveg:'Legjobb források: tojás, csirke, marha, bárány, lazac, tonhal, görög joghurt.'},
+        {ikon:'⏰', szoveg:'Fontos: minden étkezésnél legyen fehérje forrás — ez stabilizálja a vércukrot egész nap.'},
+      ], kerdes:'Szerinted eleget eszel fehérjét?', valaszok:['Valószínűleg nem elég','Nem tudom','Elég lehet','Biztosan eleget'],
+      zaras:'A legtöbb ember nem eszik eleget fehérjét. Figyeld meg a következő napokban! 💙' },
+
+    { nap:13, het:2, cim:'Glükóz és inzulin — a vércukor hullámvasút', emoji:'📈', szin:'var(--piros)', bg:'var(--piros-v)',
+      bevezeto:'A vércukor stabilitása az egészséges anyagcsere alapja. Az inzulinrezisztencia a leggyakoribb anyagcsere-probléma — és az étrenddel megelőzhető.',
+      pontok:[
+        {ikon:'🎢', szoveg:'Szénhidrát → vércukor emelkedés → inzulin → vércukor esés → éhség → szénhidrát… Ez a hullámvasút.'},
+        {ikon:'🛑', szoveg:'A hullámvasutat megállítja: fehérje és zsír kombináció minden étkezésnél.'},
+        {ikon:'🥗', szoveg:'Trükk: étkezés előtt egyél zöldséget — a rost lassítja a cukor felszívódást.'},
+      ], kerdes:'Szoktál étkezés után fáradtnak, álmosnak lenni?', valaszok:['Igen, mindig','Néha','Ritkán','Nem'],
+      zaras:'Ha igen — ez a vércukor hullámvasút jele. A következő napokban erre figyelünk! 💙' },
+
+    { nap:14, het:2, cim:'2. hét összefoglalója 🌟', emoji:'🌟', szin:'var(--narancs)', bg:'var(--narancs-v)',
+      bevezeto:'Két hét — és már komoly tudásod van a táplálkozásról! Nézzük az összefoglalót.',
+      pontok:[
+        {ikon:'✅', szoveg:'Zöldségek és gyümölcsök — sokféle szín, bogyósok előnyben, gyümölcs reggel.'},
+        {ikon:'✅', szoveg:'Jó zsírok — olívaolaj, avokádó, vaj. Napraforgóolaj ki, olívaolaj be!'},
+        {ikon:'✅', szoveg:'Omega-3 — zsíros hal hetente 2-3x. Az arány a kulcs!'},
+        {ikon:'✅', szoveg:'Fehérje minden étkezésnél — vércukor stabilitás az alap.'},
+      ], kerdes:'Mi változott az étkezési szokásaidban az első 2 hét alatt?', valaszok:['Sok minden','Néhány dolog','Még alig','Még semmi'],
+      zaras:'3. héten jön a méregtelenítés, bélflóra és a hormonális egyensúly. 💙' },
+
+    // ══ 3. HÉT: MÉREGTELENÍTÉS, BÉLFLÓRA ══
+    { nap:15, het:3, cim:'A máj szerepe a méregtelenítésben', emoji:'🫀', szin:'var(--zold)', bg:'var(--zold-v)',
+      bevezeto:'A máj a szervezet szűrője — naponta több száz méreganyagot, hormont és anyagcsere-terméket dolgoz fel.',
+      pontok:[
+        {ikon:'🔧', szoveg:'A máj méregtelenítéséhez szüksége van B-vitaminokra, magnéziumra, cinkre, C-vitaminra és antioxidánsokra.'},
+        {ikon:'🥗', szoveg:'Májtámogató ételek: cékla, articsóka, brokkoli, fokhagyma, tojás (kolin), citrom.'},
+        {ikon:'💧', szoveg:'A megfelelő vízfogyasztás az egyik legfontosabb májtámogató — a toxinok kiválasztásához víz kell.'},
+      ], kerdes:'Éreztél már olyat hogy méregtelenítésre van szükséged?', valaszok:['Igen, folyamatosan','Időnként','Ritkán','Nem igazán'],
+      zaras:'A máj minden nap dolgozik — adunk neki megfelelő tápanyagokat! 💙' },
+
+    { nap:16, het:3, cim:'Probiotikumok és prebiotikumok', emoji:'🦠', szin:'var(--zold)', bg:'var(--zold-v)',
+      bevezeto:'A probiotikumok élő baktériumok, a prebiotikumok az ételük. Mindkettőre szükség van az egészséges bélflórához.',
+      pontok:[
+        {ikon:'🧫', szoveg:'Probiotikum forrás: kefir, joghurt (élőflórás), savanyú káposzta, kimchi, kovászos uborka.'},
+        {ikon:'🌿', szoveg:'Prebiotikum forrás: hagymafélék, fokhagyma, articsóka, spárga.'},
+        {ikon:'💡', szoveg:'Naponta 1 adag fermentált étel és 5+ féle zöldség — ez a jó bélflóra alap.'},
+      ], kerdes:'Szoktál fermentált ételeket enni?', valaszok:['Sosem','Ritkán','Hetente','Minden nap'],
+      zaras:'Kezd a kefirrel — egy kis pohár naponta rengeteg jótékony baktériumot visz be. 💙' },
+
+    { nap:17, het:3, cim:'Glutén — kinek és miért érdemes kerülni?', emoji:'🌾', szin:'var(--narancs)', bg:'var(--narancs-v)',
+      bevezeto:'A glutén a búza, rozs és árpa fehérjéje. A lisztérzékenység csak az egyik ok amiért sokan jobban érzik magukat glutén nélkül.',
+      pontok:[
+        {ikon:'🔬', szoveg:'A glutén minden embernél megnöveli a bélfalat átjárhatóvá tevő zonulin termelést — ez lehet a szivárgó bél forrása.'},
+        {ikon:'😴', szoveg:'Glutén érzékenység tünetei: fáradtság étkezés után, puffadás, bőrproblémák, fejfájás, ízületi fájdalom.'},
+        {ikon:'✅', szoveg:'Gluténmentes alternatívák: édesburgonya, quinoa, gesztenye liszt, mandulaőrlemény.'},
+      ], kerdes:'Tapasztalsz tüneteket kenyér vagy tészta fogyasztás után?', valaszok:['Igen, egyértelműen','Lehet hogy igen','Nem tudom','Nem'],
+      zaras:'Próbáld ki 2 hétig elhagyni a gluténtartalmú ételeket — és figyeld a változást! 💙' },
+
+    { nap:18, het:3, cim:'A cukor — az igazi ellenség', emoji:'🍬', szin:'var(--piros)', bg:'var(--piros-v)',
+      bevezeto:'Az átlagos ember naponta rengeteg rejtett cukrot fogyaszt feldolgozott ételekben — és sokszor nem is tud róla.',
+      pontok:[
+        {ikon:'🕵️', szoveg:'Rejtett cukor: ketchup, joghurt, müzli, gyümölcslé, egészségesnek tűnő szelet, felvágott, mártások.'},
+        {ikon:'🧠', szoveg:'A cukor addiktív — ugyanolyan agyi jutalomreakciót vált ki mint bizonyos szerek.'},
+        {ikon:'🔄', szoveg:'Alternatívák: bogyós gyümölcsök, étcsokoládé (85% fölött), fahéj, stevia.'},
+      ], kerdes:'Naponta eszel édességet vagy cukros italt?', valaszok:['Igen, többször','Igen, egyszer','Csak néha','Szinte sosem'],
+      zaras:'A cukrot nem tiltjuk teljesen — de tudatosságot kérünk. Mi kerül a szádon be? 💙' },
+
+    { nap:19, het:3, cim:'D-vitamin — a napsugár hormon', emoji:'☀️', szin:'var(--sarga)', bg:'var(--sarga-v)',
+      bevezeto:'A D-vitamin valójában hormon. Befolyásolja az immunrendszert, a hangulatot, a csontokat — és a magyarok 80%-a hiányos belőle.',
+      pontok:[
+        {ikon:'☀️', szoveg:'A legjobb forrás a napfény — 20 perc közvetlen napozás nyáron elegendő. Ősztől tavaszig szinte lehetetlen eleget kapni.'},
+        {ikon:'💊', szoveg:'Pótlás: napi 2000-4000 NE D3-vitamin K2-vel együtt — a K2 segíti a kalciumot a megfelelő helyre.'},
+        {ikon:'🐟', szoveg:'Ételből: zsíros hal, tojássárgája, máj — de pótláshoz általában nem elegendő.'},
+      ], kerdes:'Szedsz D-vitamint?', valaszok:['Igen, rendszeresen','Csak télen','Ritkán','Nem szedem'],
+      zaras:'A D-vitamin pótlás az egyik legfontosabb kiegészítő Magyarországon — különösen október-áprilisban! 💙' },
+
+    { nap:20, het:3, cim:'Magnézium — a hiányzó ásványi anyag', emoji:'⚡', szin:'var(--lila)', bg:'var(--lila-v)',
+      bevezeto:'A magnézium több mint 300 enzimreakcióban vesz részt. A stressz, cukor és kávé mind csökkentik a szintjét — a magyarok 70%-a hiányos belőle.',
+      pontok:[
+        {ikon:'😴', szoveg:'Magnéziumhiány tünetei: izomgörcs, alvászavar, fejfájás, szorongás, magas vérnyomás.'},
+        {ikon:'🌿', szoveg:'Ételből: sötét zöld levelesek, tökmag, mandula, sötét csokoládé (85% fölött), avokádó.'},
+        {ikon:'💊', szoveg:'Pótlás: magnézium-biszglicinát este lefekvés előtt — segít az elalvásban és az izomlazításban.'},
+      ], kerdes:'Tapasztalsz izomgörcsöt vagy alvászavart?', valaszok:['Igen, gyakran','Néha','Ritkán','Nem'],
+      zaras:'Ha igen — a magnézium pótlás már 1-2 héten belül érezhető változást hozhat. 💙' },
+
+    { nap:21, het:3, cim:'3. hét összefoglalója 🌟', emoji:'🌟', szin:'var(--narancs)', bg:'var(--narancs-v)',
+      bevezeto:'Három hét — és már komoly tudásod van a méregtelenítésről és a bélflóráról!',
+      pontok:[
+        {ikon:'✅', szoveg:'Máj támogatás — cékla, articsóka, brokkoli, sok víz naponta.'},
+        {ikon:'✅', szoveg:'Bélflóra — fermentált ételek naponta, sokféle zöldség.'},
+        {ikon:'✅', szoveg:'Glutén és cukor csökkentés — tudatos választások minden nap.'},
+        {ikon:'✅', szoveg:'D-vitamin és magnézium — a két legfontosabb pótlandó.'},
+      ], kerdes:'Melyik volt a leghasznosabb lecke ebben a hétben?', valaszok:['Máj méregtelenítés','Bélflóra','Glutén és cukor','D-vitamin és magnézium'],
+      zaras:'4. héten jönnek a hormonok, stressz és pajzsmirigy témák. Készen állsz? 💙' },
   ],
 
   elotte: [
@@ -3647,7 +3793,8 @@ function leckeValaszt(napIdx, valaszIdx) {
 }
 
 function leckeKovetkezo() {
-  toast('📚 A következő lecke holnap jelenik meg!');
+  leckePontHozzaad();
+  toast('📚 Lecke kész! +10 pont! 🌟', 'z');
   setTimeout(() => vissza(), 1400);
 }
 
@@ -4975,6 +5122,56 @@ const MERFOLDK = [
 function merfoldk_betolt() {
   const el = document.getElementById('merfoldk-tartalom');
   if (!el) return;
+
+  // Pont progress a tetején
+  const kovetkezo = JUTALMAK.find(j => j.pont > pontAdatok.osszes);
+  const elozo = JUTALMAK.filter(j => j.pont <= pontAdatok.osszes).slice(-1)[0];
+  const elozo_pont = elozo ? elozo.pont : 0;
+  const pct = kovetkezo ? Math.round((pontAdatok.osszes - elozo_pont) / (kovetkezo.pont - elozo_pont) * 100) : 100;
+
+  const pontHTML = `
+    <div style="background:linear-gradient(135deg,#1c1917,#292524);border-radius:var(--r);padding:20px;margin-bottom:14px;color:white">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div>
+          <div style="font-size:11px;opacity:.6;text-transform:uppercase;letter-spacing:.08em">Összpontszám</div>
+          <div style="font-size:32px;font-weight:900;color:#fbbf24" id="pont-osszes-szam">${pontAdatok.osszes.toLocaleString('hu')}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;opacity:.6">Ma szerzett</div>
+          <div style="font-size:18px;font-weight:800;color:#86efac">+${pontAdatok.mai}</div>
+        </div>
+      </div>
+      ${kovetkezo ? `
+      <div style="font-size:11px;opacity:.7;margin-bottom:6px">Következő jutalom: ${kovetkezo.nev}</div>
+      <div style="background:rgba(255,255,255,.15);border-radius:999px;height:8px;overflow:hidden">
+        <div id="pont-progress" style="background:#fbbf24;height:100%;border-radius:999px;width:${pct}%;transition:width 1s ease"></div>
+      </div>
+      <div style="font-size:11px;opacity:.6;margin-top:4px;text-align:right">${pontAdatok.osszes} / ${kovetkezo.pont} pont</div>
+      ` : '<div style="font-size:14px;text-align:center;padding:8px">🏆 Elérted a legmagasabb szintet!</div>'}
+    </div>
+
+    <!-- Jutalmak lista -->
+    <div style="font-size:13px;font-weight:800;color:var(--s900);margin-bottom:10px">🏅 Jutalmak és mérföldkövek</div>
+    ${JUTALMAK.map(j => {
+      const elert = pontAdatok.osszes >= j.pont;
+      const aktiv = pontAdatok.jutalmak.includes(j.pont);
+      const bg = aktiv ? 'var(--zold-v)' : elert ? 'var(--kek-v)' : 'var(--s50)';
+      const brd = aktiv ? 'var(--zold-k)' : elert ? 'var(--kek-k)' : 'var(--s200)';
+      const op = elert ? 1 : 0.5;
+      const ikon = j.nev.split(' ')[0];
+      const nev2 = j.nev.slice(j.nev.indexOf(' ')+1);
+      const pontSzin = aktiv ? 'var(--zold)' : 'var(--s400)';
+      const elertDiv = aktiv ? '<div style="font-size:10px;color:var(--zold)">✅ Elért!</div>' : '';
+      return '<div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;margin-bottom:8px;background:' + bg + ';border:1.5px solid ' + brd + ';opacity:' + op + '"><div style="font-size:28px">' + ikon + '</div><div style="flex:1"><div style="font-size:13px;font-weight:800;color:var(--s900)">' + nev2 + '</div><div style="font-size:11px;color:var(--s500)">' + j.leiras + '</div></div><div style="text-align:right"><div style="font-size:12px;font-weight:800;color:' + pontSzin + '">' + j.pont + ' pont</div>' + elertDiv + '</div></div>';
+    }).join('')}
+
+    <!-- Pont előzmény -->
+    <div style="font-size:13px;font-weight:800;color:var(--s900);margin:14px 0 10px">📋 Pont előzmény</div>
+    ${pontAdatok.tortenet.slice(-10).reverse().map(t => '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--s100);font-size:12px"><span style="color:var(--s700)">' + t.ok + '</span><span style="font-weight:800;color:var(--kek)">+' + t.pont + '</span></div>').join('') || '<div style="color:var(--s400);font-size:13px">Még nincs pont előzmény</div>'}
+  `;
+
+  el.innerHTML = pontHTML;
+  pontUIFrissit();
   const u = bejelentkezettUser || {};
   const het = u.het || 1;
   const elert  = MERFOLDK.filter(m => m.felt(u));
@@ -5366,6 +5563,402 @@ function pwaAllapot() {
 pwaManifestInit();
 swRegisztrál();
 
+
+
+// ══════════════════════════════════════
+// 🏅 PONTRENDSZER ÉS JUTALMAK
+// ══════════════════════════════════════
+
+// Pontszerzési lehetőségek
+const PONT_ERTEKEK = {
+  lecke_elolvasva:    10,   // Napi lecke elolvasva
+  lecke_valasz:        5,   // Lecke kérdésre válaszolt
+  naplo_kitoltve:     15,   // Napi napló kitöltve
+  szokasok_mind:      20,   // Összes szokás teljesítve
+  szokasok_fele:       8,   // Szokások fele teljesítve
+  kviz_helyes:        15,   // Kvíz helyes válasz
+  kviz_tokeletes:     25,   // Kvíz 3/3 helyes
+  viz_cel:            10,   // Napi vízcél teljesítve (8 pohár)
+  alvas_jo:            8,   // Jó alvás (7h+)
+  streak_7nap:        50,   // 7 napos sorozat
+  streak_14nap:      100,   // 14 napos sorozat
+  streak_30nap:      250,   // 30 napos sorozat
+  bejelentkezes:       3,   // Napi belépés
+};
+
+// Jutalmak és mérföldkövek
+const JUTALMAK = [
+  { pont: 50,   nev: '🌱 Elindultál!',        leiras: 'Az első 50 pont — a legjobb kezdet!',            szin: 'var(--zold)' },
+  { pont: 150,  nev: '💧 Vizes bajnok',        leiras: '150 pont — következetes vagy!',                  szin: 'var(--kek)' },
+  { pont: 300,  nev: '🔥 Hetes sorozat',       leiras: '300 pont — a szokások már rögzülnek!',           szin: 'var(--narancs)' },
+  { pont: 500,  nev: '⭐ Félúton',             leiras: '500 pont — félúton vagy a programban!',          szin: 'var(--sarga)' },
+  { pont: 750,  nev: '🥈 Ezüst szint',         leiras: '750 pont — komolyan veszed az egészséged!',      szin: 'var(--s500)' },
+  { pont: 1000, nev: '🥇 Arany szint',         leiras: '1000 pont — ez igazi elkötelezettség!',          szin: 'var(--sarga)' },
+  { pont: 1500, nev: '💎 Gyémánt szint',       leiras: '1500 pont — a legjobbak közé tartozol!',         szin: 'var(--kek)' },
+  { pont: 2000, nev: '👑 Program bajnok',       leiras: '2000 pont — gratulálunk, bajnok vagy!',          szin: 'var(--lila)' },
+  { pont: 3000, nev: '🏆 Életmód mester',       leiras: '3000 pont — ez az igazi életmódváltás!',         szin: 'var(--narancs)' },
+];
+
+// Pont adatok LocalStorage-ból
+let pontAdatok = JSON.parse(localStorage.getItem('pont_adatok') || JSON.stringify({
+  osszes:    0,
+  mai:       0,
+  maiDatum:  '',
+  tortenet:  [],     // [{datum, ok, pont}]
+  jutalmak:  [],     // elért jutalmak
+}));
+
+function pontNapi() {
+  const ma = new Date().toDateString();
+  if (pontAdatok.maiDatum !== ma) {
+    pontAdatok.mai = 0;
+    pontAdatok.maiDatum = ma;
+    // Napi belépés pont
+    pontHozzaad('bejelentkezes', 'Napi belépés');
+  }
+}
+
+function pontHozzaad(tipas, megjegyzes = '') {
+  const ertek = PONT_ERTEKEK[tipas] || 0;
+  if (ertek === 0) return;
+
+  const ma = new Date().toDateString();
+  pontAdatok.osszes += ertek;
+  pontAdatok.mai    += ertek;
+  pontAdatok.maiDatum = ma;
+  pontAdatok.tortenet.push({
+    datum:  new Date().toLocaleDateString('hu-HU'),
+    ok:     megjegyzes || tipas,
+    pont:   ertek,
+  });
+
+  // Max 100 tétel az előzményben
+  if (pontAdatok.tortenet.length > 100) pontAdatok.tortenet.shift();
+
+  localStorage.setItem('pont_adatok', JSON.stringify(pontAdatok));
+
+  // Jutalomcheck
+  pontJutalomCheck(pontAdatok.osszes - ertek, pontAdatok.osszes);
+
+  // UI frissítés
+  pontUIFrissit();
+
+  console.log(`+${ertek} pont: ${megjegyzes}`);
+}
+
+function pontJutalomCheck(elotte, utan) {
+  JUTALMAK.forEach(j => {
+    if (elotte < j.pont && utan >= j.pont) {
+      // Új jutalmat ért el!
+      if (!pontAdatok.jutalmak.includes(j.pont)) {
+        pontAdatok.jutalmak.push(j.pont);
+        localStorage.setItem('pont_adatok', JSON.stringify(pontAdatok));
+        // Konfetti + értesítés
+        setTimeout(() => {
+          konfettiIndít();
+          toast(`${j.nev} — ${j.leiras}`, 'z');
+          pushKuld('🏅 Új jutalom!', j.nev + ' — ' + j.leiras);
+        }, 500);
+      }
+    }
+  });
+}
+
+function pontUIFrissit() {
+  // Főoldalon pont badge
+  const badge = document.getElementById('pont-badge');
+  if (badge) badge.textContent = pontAdatok.osszes.toLocaleString('hu') + ' pont';
+
+  // Haladás oldalon
+  const haladBadge = document.getElementById('haladás-pont');
+  if (haladBadge) haladBadge.textContent = pontAdatok.osszes.toLocaleString('hu');
+
+  // Következő jutalom progress
+  const kovetkezo = JUTALMAK.find(j => j.pont > pontAdatok.osszes);
+  const progressEl = document.getElementById('pont-progress');
+  if (progressEl && kovetkezo) {
+    const elozo = JUTALMAK.filter(j => j.pont <= pontAdatok.osszes).slice(-1)[0];
+    const elozo_pont = elozo ? elozo.pont : 0;
+    const pct = Math.round((pontAdatok.osszes - elozo_pont) / (kovetkezo.pont - elozo_pont) * 100);
+    progressEl.style.width = pct + '%';
+  }
+  const kovetkezoNev = document.getElementById('pont-kovetkezo');
+  if (kovetkezoNev && kovetkezo) {
+    kovetkezoNev.textContent = kovetkezo.nev + ' — ' + kovetkezo.pont + ' pont';
+  }
+}
+
+// ── Napi kvíz rendszer (1 kvíz naponta, random) ──
+let maiKvizMegvan = false;
+
+function naiKvizEllenorzes() {
+  const ma = new Date().toDateString();
+  const utolso = localStorage.getItem('napi_kviz_datum');
+  maiKvizMegvan = utolso === ma;
+  return !maiKvizMegvan;
+}
+
+function naiKvizKesz(pontok, max) {
+  const ma = new Date().toDateString();
+  localStorage.setItem('napi_kviz_datum', ma);
+  maiKvizMegvan = true;
+
+  // Pontok hozzáadása
+  pontok === max
+    ? pontHozzaad('kviz_tokeletes', 'Tökéletes napi kvíz (' + max + '/' + max + ')')
+    : pontHozzaad('kviz_helyes', 'Napi kvíz (' + pontok + '/' + max + ' helyes)');
+
+  // Heti kvíz badge frissítés
+  kvizBadgeFrissit();
+}
+
+// ── Napi lecke pontok ──
+function leckePontHozzaad() {
+  const ma = new Date().toDateString();
+  const kulcs = 'lecke_pont_' + ma;
+  if (!localStorage.getItem(kulcs)) {
+    pontHozzaad('lecke_elolvasva', 'Napi lecke elolvasva');
+    localStorage.setItem(kulcs, '1');
+  }
+}
+
+// ── Szokás pipálásnál pont ──
+function szokasokPontCheck() {
+  const u = bejelentkezettUser || {};
+  const prog = u.program || 'eletmod';
+  const szokasok2 = SZOKASOK[prog] || SZOKASOK.eletmod;
+  const kesz = szokasok2.filter(s => szokásAllapot[s.id]).length;
+  const ma = new Date().toDateString();
+  const kulcs = 'szokasok_pont_' + ma;
+
+  if (!localStorage.getItem(kulcs)) {
+    if (kesz === szokasok2.length) {
+      pontHozzaad('szokasok_mind', 'Összes szokás teljesítve!');
+      localStorage.setItem(kulcs, 'mind');
+    } else if (kesz >= Math.ceil(szokasok2.length / 2)) {
+      pontHozzaad('szokasok_fele', 'Szokások fele teljesítve');
+      localStorage.setItem(kulcs, 'fele');
+    }
+  }
+}
+
+// ── Napló mentésnél pont ──
+function naploPontHozzaad() {
+  const ma = new Date().toDateString();
+  const kulcs = 'naplo_pont_' + ma;
+  if (!localStorage.getItem(kulcs)) {
+    pontHozzaad('naplo_kitoltve', 'Napi napló kitöltve');
+    localStorage.setItem(kulcs, '1');
+  }
+}
+
+// ══════════════════════════════════════
+// 📧 EMAIL ÉRTESÍTÉSEK
+// EmailJS - ingyenes, böngészőből működik
+// Regisztráció: emailjs.com
+// ══════════════════════════════════════
+
+const EMAILJS_CONFIG = {
+  serviceId:  localStorage.getItem('emailjs_service') || 'EMAILJS_SERVICE_ID',
+  publicKey:  localStorage.getItem('emailjs_key')     || 'EMAILJS_PUBLIC_KEY',
+  templates: {
+    uj_ugyfel:    'template_uj_ugyfel',
+    blues_alert:  'template_blues_alert',
+    program_vege: 'template_program_vege',
+    heti_emlek:   'template_heti_emlek',
+  }
+};
+
+// EmailJS script betöltése
+function emailJSInit() {
+  if (window.emailjs) return;
+  const script = document.createElement('script');
+  script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+  script.onload = () => {
+    if (EMAILJS_CONFIG.publicKey !== 'EMAILJS_PUBLIC_KEY') {
+      window.emailjs.init({ publicKey: EMAILJS_CONFIG.publicKey });
+    }
+  };
+  document.head.appendChild(script);
+}
+emailJSInit();
+
+async function emailErtesitesKuld({ tipas, ugyfelNev, ugyfelEmail, program, konzultansEmail, extraAdat = {} }) {
+  // Ha nincs EmailJS beállítva — Airtable-be mentjük a küldendő emailt
+  if (!window.emailjs || EMAILJS_CONFIG.publicKey === 'EMAILJS_PUBLIC_KEY') {
+    console.log('EmailJS nincs beállítva — Airtable-be mentve:', tipas);
+    // AT-ba mentjük hogy Éva lássa
+    if (AT.token !== 'SAJAT_TOKEN_IDE') {
+      await atPost('naplok', {
+        'Ügyfél Email': ugyfelEmail || '',
+        'Ügyfél Név': ugyfelNev || '',
+        'Dátum': new Date().toISOString().split('T')[0],
+        'Étkezések': '[EMAIL ÉRTESÍTÉS] ' + tipas + ' — ' + JSON.stringify(extraAdat),
+      });
+    }
+    return;
+  }
+
+  const PROG_NEV = {eletmod:'Életmódváltás',elotte:'Várandósság előtt',alatt:'Várandósság alatt',gyerekágy:'Gyerekágy'};
+  const templateId = EMAILJS_CONFIG.templates[tipas] || 'template_uj_ugyfel';
+
+  try {
+    await window.emailjs.send(
+      EMAILJS_CONFIG.serviceId,
+      templateId,
+      {
+        konzultans_email: konzultansEmail || 'eva@erthetobbegeszseg.hu',
+        ugyfel_nev:       ugyfelNev || '',
+        ugyfel_email:     ugyfelEmail || '',
+        program_nev:      PROG_NEV[program] || program || '',
+        datum:            new Date().toLocaleDateString('hu-HU'),
+        extra:            JSON.stringify(extraAdat),
+      }
+    );
+    console.log('Email elküldve:', tipas);
+  } catch(e) {
+    console.log('Email hiba:', e);
+  }
+}
+
+
+// ══════════════════════════════════════
+// 🔔 PUSH ÉRTESÍTÉSEK
+// ══════════════════════════════════════
+
+const PUSH_IDOPONTOK = [
+  { ora: 8,  perc: 0,  uzenet: 'Jó reggelt! 🌅 Ne felejtsd el a reggeli fehérjét!', id: 'reggeli' },
+  { ora: 12, perc: 30, uzenet: 'Ebédidő! 🥗 Mit eszel ma? Töltsd ki a naplódat!', id: 'ebéd' },
+  { ora: 20, perc: 0,  uzenet: 'Este van — töltöd ki a mai naplódat? 📖 Csak 2 perc!', id: 'esti_naplo' },
+  { ora: 21, perc: 30, uzenet: 'Bevetted ma az összes vitamint? 💊', id: 'vitamin' },
+];
+
+let pushTimerIds = [];
+
+async function pushEngedelyKer() {
+  if (!('Notification' in window)) {
+    toast('Ez a böngésző nem támogatja az értesítéseket');
+    return false;
+  }
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') {
+    toast('Push értesítések tiltva — engedélyezd a böngésző beállításaiban');
+    return false;
+  }
+  const result = await Notification.requestPermission();
+  return result === 'granted';
+}
+
+async function pushAktival() {
+  const engedely = await pushEngedelyKer();
+  if (!engedely) return;
+
+  localStorage.setItem('push_aktiv', '1');
+  pushTimerBeallitas();
+  toast('🔔 Push értesítések bekapcsolva!', 'z');
+}
+
+function pushKikapcsol() {
+  localStorage.removeItem('push_aktiv');
+  pushTimerIds.forEach(id => clearTimeout(id));
+  pushTimerIds = [];
+  toast('🔕 Push értesítések kikapcsolva');
+}
+
+function pushKuld(cim, szoveg) {
+  if (Notification.permission !== 'granted') return;
+  const n = new Notification(cim, {
+    body: szoveg,
+    icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="%232563eb"/><text y=".9em" font-size="80" x="10">💙</text></svg>',
+    badge: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="%232563eb"/></svg>',
+    tag: 'erthetobb',
+  });
+  n.onclick = () => { window.focus(); n.close(); };
+}
+
+function pushTimerBeallitas() {
+  if (!localStorage.getItem('push_aktiv')) return;
+  pushTimerIds.forEach(id => clearTimeout(id));
+  pushTimerIds = [];
+
+  const most = new Date();
+  PUSH_IDOPONTOK.forEach(p => {
+    const cel = new Date();
+    cel.setHours(p.ora, p.perc, 0, 0);
+    if (cel <= most) cel.setDate(cel.getDate() + 1); // Holnap
+    const diff = cel - most;
+    const id = setTimeout(() => {
+      pushKuld('Érthetőbb Egészség 💙', p.uzenet);
+      // Másnap újra
+      const id2 = setTimeout(() => pushTimerBeallitas(), 24 * 60 * 60 * 1000);
+      pushTimerIds.push(id2);
+    }, diff);
+    pushTimerIds.push(id);
+  });
+}
+
+// Induláskor push timer beállítás
+if (localStorage.getItem('push_aktiv') && Notification.permission === 'granted') {
+  pushTimerBeallitas();
+}
+
+// ══════════════════════════════════════
+// 📅 AUTOMATIKUS HÉT LÉPTETŐ
+// ══════════════════════════════════════
+
+async function hetLepteto() {
+  const u = bejelentkezettUser;
+  if (!u || u.szerep !== 'ugyfel') return;
+
+  const INDUL_KULCS = 'program_indulas_' + u.email;
+  let indulas = localStorage.getItem(INDUL_KULCS);
+
+  if (!indulas) {
+    // Első belépés — rögzítjük az indulást
+    indulas = new Date().toISOString();
+    localStorage.setItem(INDUL_KULCS, indulas);
+  }
+
+  const indulasDate = new Date(indulas);
+  const ma = new Date();
+  const napokElteltek = Math.floor((ma - indulasDate) / (1000 * 60 * 60 * 24));
+  const szamitottHet = Math.min(Math.floor(napokElteltek / 7) + 1, 12);
+
+  // Ha változott a hét
+  if (szamitottHet !== u.het) {
+    const regiHet = u.het;
+    bejelentkezettUser.het = szamitottHet;
+
+    // AT frissítés
+    if (AT.token !== 'SAJAT_TOKEN_IDE' && u.atRecordId) {
+      await atPatch('felhasznalok', u.atRecordId, { 'Hét': szamitottHet });
+      console.log(`Hét frissítve: ${regiHet} → ${szamitottHet}`);
+    }
+
+    // Értesítés az ügyfélnek
+    if (szamitottHet > regiHet) {
+      setTimeout(() => {
+        pushKuld('🎉 Új hét!', szamitottHet + '. hét kezdődik! Nézd meg az új leckédet!');
+        toast('🎉 ' + szamitottHet + '. hét kezdődött! Új lecke vár rád!', 'z');
+      }, 2000);
+    }
+
+    // Ha program vége
+    const maxHet = (u.program === 'elotte' || u.program === 'alatt') ? 8 : 12;
+    if (szamitottHet >= maxHet && regiHet < maxHet) {
+      toast('🏆 Gratulálunk! Elvégezted a programot!', 'z');
+      emailErtesitesKuld({
+        tipas: 'program_vege',
+        ugyfelNev: u.nev,
+        ugyfelEmail: u.email,
+        program: u.program,
+        konzultansEmail: 'eva@erthetobbegeszseg.hu',
+      });
+      setTimeout(() => oldal('o-program-zaras'), 3000);
+    }
+  }
+}
+
 // ══════════════════════════════════════
 // 🗄️ AIRTABLE BEKÖTÉS
 // ══════════════════════════════════════
@@ -5563,7 +6156,8 @@ async function naplóMent() {
     } else {
       await atPost('naplok', mezok);
     }
-    toast('✅ Napló elmentve!', 'z');
+    toast('✅ Napló elmentve! +15 pont', 'z');
+  naploPontHozzaad();
   } else {
     // Demo módban localStorage-ba ment
     localStorage.setItem('naplo_' + ma, JSON.stringify(mezok));
@@ -6911,12 +7505,23 @@ function bluesKikuldErtekeles() {
   localStorage.setItem(hetKulcs, JSON.stringify(ossz));
 
   // Konzultáns értesítés ha magas pontszám
-  if (ossz >= 13 && AT.token !== 'SAJAT_TOKEN_IDE') {
-    atPost('felhasznalok', {
-      'Email': u.email,
-      'Blues pontszám': ossz,
-      'Blues dátum': new Date().toISOString().split('T')[0],
-      'Blues figyelmeztető': ossz >= 13 ? 'IGEN' : 'nem',
+  if (ossz >= 13) {
+    if (AT.token !== 'SAJAT_TOKEN_IDE') {
+      atPost('felhasznalok', {
+        'Email': u.email,
+        'Blues pontszám': ossz,
+        'Blues dátum': new Date().toISOString().split('T')[0],
+        'Blues figyelmeztető': 'IGEN',
+      });
+    }
+    // Email értesítés Évának
+    emailErtesitesKuld({
+      tipas: 'blues_alert',
+      ugyfelNev: u.nev,
+      ugyfelEmail: u.email,
+      program: u.program,
+      konzultansEmail: 'eva@erthetobbegeszseg.hu',
+      extraAdat: { pontszam: ossz, het: u.het },
     });
   }
 
@@ -7529,6 +8134,9 @@ function kvizKikuldErtekeles() {
     valaszok, datum: new Date().toLocaleDateString('hu-HU', {month:'short', day:'numeric'}),
   };
   localStorage.setItem('kviz_allapot', JSON.stringify(kvizAllapot));
+
+  // Napi kvíz pontok hozzáadása
+  naiKvizKesz(pontok, kviz.kerdesek.length);
 
   kvizEredmenyMutat(prog, het, valaszok);
 }
@@ -8164,6 +8772,28 @@ function konfettiIndít() {
   }
 }
 
+
+function pushProfilToggle() {
+  const aktiv = localStorage.getItem('push_aktiv');
+  if (aktiv) {
+    pushKikapcsol();
+    document.getElementById('push-profil-al').textContent = 'Napi emlékeztetők bekapcsolása';
+    document.getElementById('push-profil-ikon').textContent = '🔕';
+  } else {
+    pushAktival();
+    document.getElementById('push-profil-al').textContent = 'Reggel 8:00, Este 20:00 és 21:30';
+    document.getElementById('push-profil-ikon').textContent = '🔔';
+  }
+}
+
+function pushProfilFrissit() {
+  const aktiv = localStorage.getItem('push_aktiv');
+  const al = document.getElementById('push-profil-al');
+  const ikon = document.getElementById('push-profil-ikon');
+  if (al) al.textContent = aktiv ? 'Reggel 8:00, Este 20:00 és 21:30 — Bekapcsolt' : 'Napi emlékeztetők bekapcsolása';
+  if (ikon) ikon.textContent = aktiv ? '🔔' : '🔕';
+}
+
 function profilBetolt() {
   const u = bejelentkezettUser;
   if (!u) return;
@@ -8177,6 +8807,7 @@ function profilBetolt() {
   if (prog) prog.textContent = PROG_NEV_FULL[u.program] || '—';
   if (email) email.textContent = u.email || '—';
   if (avatar) avatar.textContent = u.nev ? u.nev.split(' ').map(s=>s[0]).join('').slice(0,2) : '👤';
+  pushProfilFrissit();
   if (adatok) adatok.innerHTML = `
     <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--s100)">
       <span style="color:var(--s500)">Konzultáns</span>
