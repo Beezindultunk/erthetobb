@@ -258,8 +258,9 @@ button{cursor:pointer;font-family:inherit;border:none;background:none}
           style="width:100%;padding:11px 13px;border-radius:9px;border:1.5px solid rgba(255,255,255,.25);
           background:rgba(255,255,255,.1);color:white;font-size:14px;outline:none;margin-bottom:13px;
           font-family:inherit">
-        <button onclick="belepGomb()" class="belep-btn" style="width:100%;padding:13px;border-radius:10px;
-          background:white;color:var(--kek);font-size:14px;font-weight:800;border:none;cursor:pointer">
+        <button onclick="belepGombKattint(this)" class="belep-btn" style="width:100%;padding:13px;border-radius:10px;
+          background:white;color:var(--kek);font-size:14px;font-weight:800;border:none;cursor:pointer;
+          transition:all .15s;position:relative;overflow:hidden">
           Belépés →
         </button>
         <div id="belep-hiba" style="display:none;margin-top:8px;font-size:12px;color:#fca5a5;text-align:center"></div>
@@ -5171,6 +5172,27 @@ async function atPatch(tabla, recordId, mezok) {
 // ══════════════════════════════════════
 // 🔐 VALÓDI BELÉPÉS — Airtable alapján
 // ══════════════════════════════════════
+
+function belepGombKattint(btn) {
+  // Vizuális visszajelzés azonnal
+  btn.style.transform = 'scale(0.97)';
+  btn.style.opacity = '0.85';
+  btn.textContent = '⏳ Belépés...';
+  btn.disabled = true;
+
+  // Kis késleltetés majd belépés
+  setTimeout(async () => {
+    await belepGomb();
+    // Ha nem lépett be (hiba), visszaállítjuk
+    setTimeout(() => {
+      btn.style.transform = 'scale(1)';
+      btn.style.opacity = '1';
+      btn.textContent = 'Belépés →';
+      btn.disabled = false;
+    }, 200);
+  }, 150);
+}
+
 async function belepGomb() {
   const email    = document.getElementById('bel-email')?.value?.trim()?.toLowerCase();
   const jelszo   = document.getElementById('bel-jelszo')?.value;
