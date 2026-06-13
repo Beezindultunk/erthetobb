@@ -5114,7 +5114,7 @@ async function receptGenAI() {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        model:'claude-sonnet-4-20250514', max_tokens:600,
+        model:'claude-sonnet-4-5', max_tokens:600,
         system: 'Te egy táplálkozási AI chef vagy az Érthetőbb Egészség platformon. Adj egy egyszerű, gyors receptet. FONTOS ELVEK: sem kenyér, sem tészta, sem rizs, sem gabona, sem glutén. Csak igazi ételek: húsok, halak, tojás, zöldségek, jó zsírok. Program: ' + prog + '. Válaszolj JSON formátumban: {"nev":"...","ido":"...","emoji":"...","hozzavalok":["..."],"lepesek":["..."],"miert":"..."}',
         messages:[{role:'user', content:'Adj egy ' + prog + ' programhoz illő egyszerű receptet! Semmi glutén, csak valódi ételek.'}]
       })
@@ -8390,7 +8390,7 @@ async function chatKuld() {
         'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5',
         max_tokens: 500,
         system: EVA_RENDSZER_UZENET(),
         messages: chatTortenet.slice(-10),
@@ -8488,7 +8488,7 @@ function fotoFelvetel(etkezesId) {
         const resp = await fetch('https://api.anthropic.com/v1/messages', {
           method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({
-            model:'claude-sonnet-4-20250514', max_tokens:200,
+            model:'claude-sonnet-4-5', max_tokens:200,
             system:'Te egy táplálkozási AI vagy. Azonosítsd az ételt a képen. SOHA ne kommentáld a kalóriát. Értékeld a fehérje/zsír/zöldség arányt. Ha kenyér/gabona látható, javasolj gluténmentes alternatívát. Max 2 mondat, barátságosan, magyarul.',
             messages:[{role:'user', content:[
               {type:'image', source:{type:'base64', media_type:file.type, data:b64}},
@@ -8628,7 +8628,7 @@ async function aiElemez(nev, base64) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5',
         max_tokens: 300,
         messages: [{
           role: 'user',
