@@ -172,25 +172,43 @@ button{cursor:pointer;font-family:inherit;border:none;background:none}
 
 
 <!-- ════════════════════════════════════
-     💬 CHAT ELŐZMÉNY PANEL (konzultáns)
+     📋💬 KONZULTÁNS DOKSI PANEL
 ════════════════════════════════════ -->
 <div class="oldal" id="o-chat-elozmeny">
   <div class="fejlec">
     <button class="vissza-btn" onclick="vissza()">← Vissza</button>
-    <span class="fejlec-cim">💬 Chat előzmények</span>
+    <span class="fejlec-cim" id="chat-elozmeny-nev">Dokumentáció</span>
   </div>
   <div class="tartalom">
-    <div id="chat-elozmeny-header" class="k kp" style="margin-bottom:14px">
-      <div style="font-size:13px;font-weight:800;color:var(--s900)" id="chat-elozmeny-nev">—</div>
-      <div style="font-size:12px;color:var(--s500);margin-top:4px">AI Coach beszélgetések összefoglalója</div>
-      <div style="margin-top:10px;padding:10px;border-radius:9px;background:#fefce8;border:1px solid #fde047;
-        font-size:11px;color:#713f12;line-height:1.6">
-        ⚠️ Ezek a beszélgetések NEM minősülnek orvosi tanácsnak. Az AI tájékoztatást nyújt, de minden egészségügyi döntés a konzultáns és az ügyfél közös felelőssége.
+
+    <!-- Tab váltó -->
+    <div style="display:flex;gap:8px;margin-bottom:16px" id="doksi-tab-sor">
+      <button id="dtab-kerdoiv" onclick="doksiTabValaszt('kerdoiv')"
+        style="flex:1;padding:10px 8px;border-radius:10px;border:2px solid var(--zold);
+        background:var(--zold-v);color:var(--zold);font-size:13px;font-weight:700;cursor:pointer">
+        📄 Kérdőív
+      </button>
+      <button id="dtab-chat" onclick="doksiTabValaszt('chat')"
+        style="flex:1;padding:10px 8px;border-radius:10px;border:2px solid var(--s200);
+        background:var(--s50);color:var(--s500);font-size:13px;font-weight:700;cursor:pointer">
+        💬 Chat összefoglaló
+      </button>
+    </div>
+
+    <!-- Kérdőív összefoglaló tartalom -->
+    <div id="doksi-kerdoiv-panel">
+      <div id="konzultans-chat-elozmeny">
+        <!-- JS tölti -->
       </div>
     </div>
-    <div id="konzultans-chat-elozmeny">
-      <!-- JS tölti -->
+
+    <!-- Chat összefoglaló tartalom -->
+    <div id="doksi-chat-panel" style="display:none">
+      <div id="konzultans-chat-tartalom">
+        <!-- JS tölti -->
+      </div>
     </div>
+
   </div>
 </div>
 
@@ -2544,17 +2562,28 @@ Büszke lehetsz magadra — szuper hét volt! 💪
     <div class="k">
       <button class="sor" onclick="kerdoivMegnyit(aktualisDashUgyfel)">
         <div class="si" style="background:#f3e8ff">📋</div>
-        <div class="sinfo"><div class="scim">Kérdőív kitöltése / frissítése</div><div class="sal">Program-specifikus felmérés</div></div>
+        <div class="sinfo"><div class="scim">Kérdőív kitöltése / frissítése</div><div class="sal">Program-specifikus állapotfelmérés</div></div>
         <span class="snyil">›</span>
       </button>
 
-      <!-- Chat előzmények gomb -->
-      <button class="sor" onclick="chatElozményPanel(aktualisDashUgyfel)"
+      <!-- Kérdőív összefoglaló -->
+      <button class="sor" onclick="konzDoksiPanel(aktualisDashUgyfel,'kerdoiv')"
+        style="background:linear-gradient(135deg,#f0fdf4,white);border-color:#bbf7d0">
+        <div class="si" style="background:var(--zold)">📄</div>
+        <div class="sinfo">
+          <div class="scim" style="color:var(--zold)">Kérdőív összefoglaló</div>
+          <div class="sal">Ügyfél felmérési adatai szekciónként</div>
+        </div>
+        <span class="snyil" style="color:var(--zold)">›</span>
+      </button>
+
+      <!-- Chat előzmények + heti összefoglaló -->
+      <button class="sor" onclick="konzDoksiPanel(aktualisDashUgyfel,'chat')"
         style="background:linear-gradient(135deg,var(--lila-v),white);border-color:var(--lila-k)">
         <div class="si" style="background:var(--lila)">💬</div>
         <div class="sinfo">
-          <div class="scim" style="color:var(--lila)">AI Chat előzmények</div>
-          <div class="sal">Ügyfél kérdései az AI coachnak</div>
+          <div class="scim" style="color:var(--lila)">AI Chat — konzultációs összefoglaló</div>
+          <div class="sal">Heti kérdések + AI összefoglaló konzultáció előtt</div>
         </div>
         <span class="snyil" style="color:var(--lila)">›</span>
       </button>
@@ -3254,6 +3283,11 @@ function ugyfelFoOldalFrissit() {
   setTimeout(kvizBadgeFrissit, 250);
   setTimeout(hetLepteto, 1500); // Automatikus hétléptető
   setTimeout(pontNapi, 2000); // Napi belépési pont
+
+  // AT frissítés — minden belépésnél szinkronizálunk
+  if (AT.aktiv() && bejelentkezettUser?.atRecordId) {
+    setTimeout(atUserFrissit, 3000);
+  }
   // Push értesítés kérés (első belépésnél)
   if (!localStorage.getItem('push_kerdes_latszott')) {
     setTimeout(pushKerdes, 5000);
@@ -5803,6 +5837,66 @@ function naploPontHozzaad() {
   }
 }
 
+
+// ══════════════════════════════════════
+// 🔄 AT FELHASZNÁLÓ SZINKRON
+// ══════════════════════════════════════
+
+async function atUserFrissit() {
+  const u = bejelentkezettUser;
+  if (!u || !AT.aktiv()) return;
+  try {
+    const rec = await atGet('felhasznalok', `{Email}="${u.email}"`);
+    if (rec.length > 0) {
+      const f = rec[0].fields;
+      // Frissítjük a hét és hf adatokat
+      bejelentkezettUser.het = parseInt(f['Hét'] || u.het);
+      bejelentkezettUser.hf  = parseInt(f['HF%'] || u.hf);
+      bejelentkezettUser.nev = f['Név'] || u.nev;
+      localStorage.setItem('bejelentkezve', JSON.stringify(bejelentkezettUser));
+      // UI frissítés
+      pontUIFrissit();
+      console.log('✅ AT szinkron kész:', bejelentkezettUser.nev, bejelentkezettUser.het + '. hét');
+    }
+  } catch(e) {
+    console.log('AT szinkron hiba (nem kritikus):', e);
+  }
+}
+
+// ══════════════════════════════════════
+// 🔑 AT TOKEN BEÁLLÍTÁSA UI-ból
+// ══════════════════════════════════════
+
+function atTokenBeallitas(token) {
+  if (!token || token.length < 10) {
+    toast('❌ Érvénytelen token!');
+    return;
+  }
+  localStorage.setItem('at_token', token);
+  AT.token = token;
+  toast('✅ AT token beállítva! Frissítsd az oldalt.', 'z');
+}
+
+// Visszajelentkezés ha el volt mentve
+(function autoBejelentkezes() {
+  const mentett = localStorage.getItem('bejelentkezve');
+  if (mentett) {
+    try {
+      const u = JSON.parse(mentett);
+      if (u && u.email && u.szerep) {
+        bejelentkezettUser = u;
+        // AT token frissítése ha van
+        if (AT.aktiv()) {
+          setTimeout(() => atUserFrissit(), 500);
+        }
+        navSzerep(u.szerep);
+      }
+    } catch(e) {
+      localStorage.removeItem('bejelentkezve');
+    }
+  }
+})();
+
 // ══════════════════════════════════════
 // 📧 EMAIL ÉRTESÍTÉSEK
 // EmailJS - ingyenes, böngészőből működik
@@ -5994,7 +6088,7 @@ async function hetLepteto() {
     bejelentkezettUser.het = szamitottHet;
 
     // AT frissítés
-    if (AT.token !== 'SAJAT_TOKEN_IDE' && u.atRecordId) {
+    if (AT.aktiv() && u.atRecordId) {
       await atPatch('felhasznalok', u.atRecordId, { 'Hét': szamitottHet });
       console.log(`Hét frissítve: ${regiHet} → ${szamitottHet}`);
     }
@@ -6028,12 +6122,13 @@ async function hetLepteto() {
 // ══════════════════════════════════════
 const AT = {
   base:   'app29gg3EPS9OYY5O',
-  token:  localStorage.getItem('at_token') || 'SAJAT_TOKEN_IDE',   // ← Ide írd be az új tokenedet
+  token:  localStorage.getItem('at_token') || '',
   url:    id => `https://api.airtable.com/v0/app29gg3EPS9OYY5O/${id}`,
   headers: () => ({
     'Authorization': 'Bearer ' + AT.token,
     'Content-Type':  'application/json',
   }),
+  aktiv: () => AT.token.length > 10,
 };
 
 // Táblák nevei (az Airtable-ben így kell elnevezni)
@@ -6118,55 +6213,66 @@ function belepGombKattint(btn) {
 }
 
 async function belepGomb() {
-  const email    = document.getElementById('bel-email')?.value?.trim()?.toLowerCase();
-  const jelszo   = document.getElementById('bel-jelszo')?.value;
-  const hibaEl   = document.getElementById('belep-hiba');
+  const email  = document.getElementById('bel-email')?.value?.trim()?.toLowerCase();
+  const jelszo = document.getElementById('bel-jelszo')?.value;
+  const hibaEl = document.getElementById('belep-hiba');
 
   if (!email || !jelszo) {
     if (hibaEl) { hibaEl.textContent = '⚠️ Add meg az email címed és jelszavad!'; hibaEl.style.display = 'block'; }
     return;
   }
 
-  // Betöltés jelzés
   const btn = document.querySelector('.belep-btn');
-  if (btn) { btn.textContent = 'Bejelentkezés...'; btn.disabled = true; }
+  if (btn) { btn.textContent = '⏳ Bejelentkezés...'; btn.disabled = true; }
+  if (hibaEl) hibaEl.style.display = 'none';
 
-  // 1. Próbál Airtable-ből betölteni
-  if (AT.token !== 'SAJAT_TOKEN_IDE') {
-    const rec = await atGet('felhasznalok', `AND({Email}="${email}", {Jelszó}="${jelszo}")`);
-    if (rec.length > 0) {
-      const f = rec[0].fields;
-      bejelentkezettUser = {
-        id:          rec[0].id,
-        nev:         f['Név'] || email,
-        email:       email,
-        szerep:      (f['Szerep'] || 'ugyfel').toLowerCase(),
-        program:     (f['Program'] || 'eletmod').toLowerCase(),
-        het:         parseInt(f['Hét'] || 1),
-        konzultans:  f['Konzultáns ID'] || 'eva',
-        konzultansId:f['Konzultáns ID'] || 'eva',
-        hf:          parseInt(f['HF%'] || 80),
-        atRecordId:  rec[0].id,
-      };
-      if (hibaEl) hibaEl.style.display = 'none';
-      if (btn) { btn.textContent = 'Belépés →'; btn.disabled = false; }
-      navSzerep(bejelentkezettUser.szerep);
-      return;
+  // ── 1. AIRTABLE belépés (ha van token) ──
+  if (AT.aktiv()) {
+    try {
+      const rec = await atGet('felhasznalok', `AND({Email}="${email}",{Jelszó}="${jelszo}")`);
+      if (rec.length > 0) {
+        const f = rec[0].fields;
+        bejelentkezettUser = {
+          id:           rec[0].id,
+          atRecordId:   rec[0].id,
+          nev:          f['Név']          || email,
+          email:        email,
+          szerep:       (f['Szerep']      || 'ugyfel').toLowerCase(),
+          program:      (f['Program']     || 'eletmod').toLowerCase(),
+          het:          parseInt(f['Hét'] || 1),
+          konzultansId: f['Konzultáns ID']|| 'eva',
+          konzultans:   f['Konzultáns ID']|| 'eva',
+          hf:           parseInt(f['HF%'] || 80),
+          telefon:      f['Telefon']      || '',
+          szulev:       f['Születési év'] || '',
+        };
+        localStorage.setItem('bejelentkezve', JSON.stringify(bejelentkezettUser));
+        if (btn) { btn.textContent = 'Belépés →'; btn.disabled = false; }
+        navSzerep(bejelentkezettUser.szerep);
+        return;
+      }
+    } catch(e) {
+      console.log('AT hiba:', e);
     }
   }
 
-  // 2. Fallback: demo felhasználók (fejlesztési mód)
+  // ── 2. Demo felhasználók (fejlesztési mód) ──
   const demoU = DEMO_FELHASZANALOK[email];
   if (demoU && demoU.jelszo === jelszo) {
     bejelentkezettUser = { ...demoU, email };
-    if (hibaEl) hibaEl.style.display = 'none';
+    localStorage.setItem('bejelentkezve', JSON.stringify(bejelentkezettUser));
     if (btn) { btn.textContent = 'Belépés →'; btn.disabled = false; }
     navSzerep(demoU.szerep);
     return;
   }
 
-  // 3. Hibás belépés
-  if (hibaEl) { hibaEl.textContent = '❌ Hibás email vagy jelszó. Próbáld újra!'; hibaEl.style.display = 'block'; }
+  // ── 3. Hibás belépés ──
+  if (hibaEl) {
+    hibaEl.textContent = AT.aktiv()
+      ? '❌ Hibás email vagy jelszó. Kérd az adminisztrátort ha elfelejtetted!'
+      : '❌ Hibás email vagy jelszó.';
+    hibaEl.style.display = 'block';
+  }
   if (btn) { btn.textContent = 'Belépés →'; btn.disabled = false; }
 }
 
@@ -6211,7 +6317,7 @@ async function naplóMent() {
 
   toast('💾 Napló mentése...', 'z');
 
-  if (AT.token !== 'SAJAT_TOKEN_IDE') {
+  if (AT.aktiv()) {
     // Megnézzük van-e már mai bejegyzés
     const meglevo = await atGet('naplok',
       `AND({Ügyfél Email}="${u.email}", {Dátum}="${ma}")`);
@@ -6234,7 +6340,7 @@ async function naplóMent() {
 // ══════════════════════════════════════
 async function szokasokAtMent() {
   const u = bejelentkezettUser;
-  if (!u || AT.token === 'SAJAT_TOKEN_IDE') return;
+  if (!u || !AT.aktiv()) return;
 
   const ma = new Date().toISOString().split('T')[0];
   const prog = u.program || 'eletmod';
@@ -6266,7 +6372,7 @@ async function szokasokAtMent() {
 // ══════════════════════════════════════
 async function meresMent(suly, derek, csipo, mell) {
   const u = bejelentkezettUser;
-  if (!u || AT.token === 'SAJAT_TOKEN_IDE') return;
+  if (!u || !AT.aktiv()) return;
 
   const ma = new Date().toISOString().split('T')[0];
   await atPost('meresek', {
@@ -6286,7 +6392,7 @@ async function meresMent(suly, derek, csipo, mell) {
 // ══════════════════════════════════════
 async function konzAdatMentAT(het, adatok) {
   const u = bejelentkezettUser;
-  if (!u || AT.token === 'SAJAT_TOKEN_IDE') return;
+  if (!u || !AT.aktiv()) return;
 
   const mezok = {
     'Konzultáns Email': u.email,
@@ -6311,7 +6417,7 @@ async function konzAdatMentAT(het, adatok) {
 // 📝 ÚJ ÜGYFÉL REGISZTRÁCIÓ
 // ══════════════════════════════════════
 async function ujUgyfelMentAT(adatok) {
-  if (AT.token === 'SAJAT_TOKEN_IDE') return true; // demo módban mindig OK
+  if (!AT.aktiv()) return true; // demo módban mindig OK
 
   // Ellenőrzés: van-e már ilyen email
   const meglevo = await atGet('felhasznalok', `{Email}="${adatok.email}"`);
@@ -6596,7 +6702,7 @@ function konzKiemelKuld(ugyfelNev, szoveg) {
   localStorage.setItem(kulcs, JSON.stringify(uzenet));
 
   // Valódi implementációban: AT-ba menti, az ügyfél látja belépéskor
-  if (AT.token !== 'SAJAT_TOKEN_IDE') {
+  if (AT.aktiv()) {
     atPost('felhasznalok', {
       'Konzultáns üzenet': szoveg.trim(),
       'Konzultáns üzenet dátuma': new Date().toISOString(),
@@ -6613,7 +6719,7 @@ function konzKiemelKuld(ugyfelNev, szoveg) {
 // ── Ügyfél belépésekor ellenőrzi van-e új konzultáns üzenet ──
 function konzKiemelBetoltAT() {
   const u = bejelentkezettUser;
-  if (!u || u.szerep !== 'ugyfel' || AT.token === 'SAJAT_TOKEN_IDE') {
+  if (!u || u.szerep !== 'ugyfel' || !AT.aktiv()) {
     konzKiemelBetolt();
     return;
   }
@@ -7370,7 +7476,7 @@ function szoptatasRogzit() {
   toast('✅ Szoptatás rögzítve! 🤱', 'z');
   szoptatasBetolt();
   // AT szinkron
-  if (AT.token !== 'SAJAT_TOKEN_IDE') {
+  if (AT.aktiv()) {
     atPost('naplok', {
       'Ügyfél Email': bejelentkezettUser?.email,
       'Dátum': new Date().toISOString().split('T')[0],
@@ -7570,7 +7676,7 @@ function bluesKikuldErtekeles() {
 
   // Konzultáns értesítés ha magas pontszám
   if (ossz >= 13) {
-    if (AT.token !== 'SAJAT_TOKEN_IDE') {
+    if (AT.aktiv()) {
       atPost('felhasznalok', {
         'Email': u.email,
         'Blues pontszám': ossz,
@@ -8738,7 +8844,7 @@ function npsValaszt(ertek) {
 function zarasKuld() {
   const szoveg = document.getElementById('zaras-visszajelzes')?.value?.trim();
   const u = bejelentkezettUser || {};
-  if (AT.token !== 'SAJAT_TOKEN_IDE') {
+  if (AT.aktiv()) {
     atPost('felhasznalok', {
       'Email': u.email,
       'NPS pontszám': npsErtek,
@@ -8905,12 +9011,14 @@ function konzListaFrissit() {
 
 function ugyfelKilep() {
   bejelentkezettUser = null;
+  localStorage.removeItem('bejelentkezve');
   oldal('o-ki-vagy');
   toast('Sikeresen kiléptél');
 }
 
 function konzKilep() {
   bejelentkezettUser = null;
+  localStorage.removeItem('bejelentkezve');
   oldal('o-ki-vagy');
   toast('Sikeresen kiléptél');
 }
@@ -8968,12 +9076,330 @@ const EVA_GYORS = {
 // ══════════════════════════════════════
 
 
-function chatElozményPanel(ugyfelNev) {
+// ══════════════════════════════════════
+// 📋💬 KONZULTÁNS DOKSI PANEL
+// ══════════════════════════════════════
+
+let aktualisDoksiUgyfel = '';
+let aktualisDoksiTab    = 'kerdoiv';
+
+function konzDoksiPanel(ugyfelNev, tab) {
+  aktualisDoksiUgyfel = ugyfelNev;
+  aktualisDoksiTab    = tab || 'kerdoiv';
+
   const nevEl = document.getElementById('chat-elozmeny-nev');
-  if (nevEl) nevEl.textContent = ugyfelNev + ' — heti chat összefoglaló';
+  if (nevEl) nevEl.textContent = ugyfelNev + ' — dokumentáció';
+
   oldal('o-chat-elozmeny');
-  setTimeout(() => hetiOsszefoglaloMutat(ugyfelNev), 150);
+  setTimeout(() => {
+    doksiTabValaszt(aktualisDoksiTab);
+  }, 120);
 }
+
+function doksiTabValaszt(tab) {
+  aktualisDoksiTab = tab;
+
+  // Tab stílusok
+  const kTab = document.getElementById('dtab-kerdoiv');
+  const cTab = document.getElementById('dtab-chat');
+  const kPan = document.getElementById('doksi-kerdoiv-panel');
+  const cPan = document.getElementById('doksi-chat-panel');
+
+  if (kTab) {
+    kTab.style.borderColor  = tab === 'kerdoiv' ? 'var(--zold)' : 'var(--s200)';
+    kTab.style.background   = tab === 'kerdoiv' ? 'var(--zold-v)' : 'var(--s50)';
+    kTab.style.color        = tab === 'kerdoiv' ? 'var(--zold)' : 'var(--s500)';
+  }
+  if (cTab) {
+    cTab.style.borderColor  = tab === 'chat' ? 'var(--lila)' : 'var(--s200)';
+    cTab.style.background   = tab === 'chat' ? 'var(--lila-v)' : 'var(--s50)';
+    cTab.style.color        = tab === 'chat' ? 'var(--lila)' : 'var(--s500)';
+  }
+  if (kPan) kPan.style.display = tab === 'kerdoiv' ? 'block' : 'none';
+  if (cPan) cPan.style.display = tab === 'chat'    ? 'block' : 'none';
+
+  if (tab === 'kerdoiv') doksiKerdoivBetolt(aktualisDoksiUgyfel);
+  if (tab === 'chat')    doksiChatBetolt(aktualisDoksiUgyfel);
+}
+
+// ── KÉRDŐÍV ÖSSZEFOGLALÓ ──
+function doksiKerdoivBetolt(ugyfelNev) {
+  const profil  = ugyfelProfilok[ugyfelNev] || {};
+  const prog    = profil.program || 'eletmod';
+  const kv      = KERDOIVEK[prog];
+  const mentett = localStorage.getItem('kerdoiv_' + ugyfelNev);
+  const valaszok= mentett ? JSON.parse(mentett) : {};
+  const el      = document.getElementById('konzultans-chat-elozmeny');
+  if (!el) return;
+
+  if (!kv) { el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--s400)">Nincs kérdőív ehhez a programhoz.</div>'; return; }
+
+  const kitoltott = Object.keys(valaszok).length;
+
+  if (kitoltott === 0) {
+    el.innerHTML = `
+      <div style="text-align:center;padding:32px 20px">
+        <div style="font-size:48px;margin-bottom:12px">📋</div>
+        <div style="font-size:15px;font-weight:800;color:var(--s900);margin-bottom:8px">A kérdőív még nincs kitöltve</div>
+        <div style="font-size:13px;color:var(--s500);margin-bottom:16px">A konzultáció elején töltsd ki ${ugyfelNev}vel együtt</div>
+        <button onclick="kerdoivMegnyit('${ugyfelNev}')" class="gomb g-zold">
+          <span>📝 Kérdőív kitöltése most</span><span>→</span>
+        </button>
+      </div>`;
+    return;
+  }
+
+  // Szekciók összeszámlálása
+  const osszes_kerdes = kv.szekciok.flatMap(s => s.kerdesek).length;
+  const pct = Math.round(kitoltott / osszes_kerdes * 100);
+
+  let html = `
+    <!-- Fejléc -->
+    <div style="background:linear-gradient(135deg,${kv.szin}22,white);border:1.5px solid ${kv.szin}44;
+      border-radius:var(--r);padding:16px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:${kv.szin};text-transform:uppercase;
+        letter-spacing:.06em;margin-bottom:6px">${kv.cim}</div>
+      <div style="font-size:16px;font-weight:900;color:var(--s900);margin-bottom:8px">${ugyfelNev}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:12px;color:var(--s500)">${kitoltott} / ${osszes_kerdes} kérdés kitöltve</div>
+        <div style="font-size:13px;font-weight:800;color:${kv.szin}">${pct}%</div>
+      </div>
+      <div style="background:var(--s200);border-radius:999px;height:6px">
+        <div style="width:${pct}%;height:100%;background:${kv.szin};border-radius:999px;transition:width .5s"></div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button onclick="kerdoivMegnyit('${ugyfelNev}')" 
+          style="flex:1;padding:9px;border-radius:9px;border:1.5px solid ${kv.szin};
+          background:${kv.szin}22;color:${kv.szin};font-size:12px;font-weight:700;cursor:pointer">
+          ✏️ Módosítás
+        </button>
+      </div>
+    </div>
+
+    <!-- Szekciók -->
+  `;
+
+  kv.szekciok.forEach((szek, si) => {
+    const szek_kerdesek  = szek.kerdesek;
+    const szek_kitoltott = szek_kerdesek.filter(k => {
+      const v = valaszok[k.id];
+      return v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0);
+    }).length;
+
+    if (szek_kitoltott === 0) return; // üres szekciót ne mutassuk
+
+    const szek_pct = Math.round(szek_kitoltott / szek_kerdesek.length * 100);
+
+    html += `
+      <div style="border:1.5px solid var(--s200);border-radius:var(--r);
+        margin-bottom:10px;overflow:hidden">
+        <!-- Szekció fejléc -->
+        <div style="padding:12px 16px;background:var(--s50);
+          display:flex;align-items:center;justify-content:space-between;
+          border-bottom:1px solid var(--s100)">
+          <div>
+            <div style="font-size:13px;font-weight:800;color:var(--s900)">${szek.cim}</div>
+            <div style="font-size:11px;color:var(--s400)">${szek_kitoltott}/${szek_kerdesek.length} kitöltve</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:36px;height:36px;border-radius:50%;
+              background:${szek_pct===100?'var(--zold)':szek_pct>50?kv.szin:'var(--s200)'};
+              display:flex;align-items:center;justify-content:center;
+              font-size:11px;font-weight:800;color:white">
+              ${szek_pct}%
+            </div>
+          </div>
+        </div>
+
+        <!-- Kérdés-válasz párok -->
+        <div style="padding:8px 16px">
+          ${szek_kerdesek.map(k => {
+            const val = valaszok[k.id];
+            if (val === undefined || val === '' || (Array.isArray(val) && val.length === 0)) {
+              return `<div style="padding:8px 0;border-bottom:1px solid var(--s100);
+                display:flex;justify-content:space-between;opacity:.4">
+                <span style="font-size:11px;color:var(--s500)">${k.cim}</span>
+                <span style="font-size:11px;color:var(--s300)">—</span>
+              </div>`;
+            }
+            const valStr = Array.isArray(val) ? val.join(' · ') : String(val);
+            const szin_val = k.tip === 'slider'
+              ? (val >= 7 ? 'var(--zold)' : val >= 4 ? 'var(--sarga)' : 'var(--piros)')
+              : 'var(--s900)';
+            return `<div style="padding:10px 0;border-bottom:1px solid var(--s100)">
+              <div style="font-size:10px;color:var(--s400);margin-bottom:3px">${k.cim}</div>
+              <div style="font-size:13px;font-weight:700;color:${szin_val};line-height:1.5">
+                ${k.tip === 'slider' ? val + ' / ' + (k.max||10) : valStr}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  });
+
+  el.innerHTML = html;
+}
+
+// ── CHAT ÖSSZEFOGLALÓ KONZULTÁCIÓ ELŐTT ──
+async function doksiChatBetolt(ugyfelNev) {
+  const u = Object.entries(DEMO_FELHASZANALOK)
+    .map(([email, adat]) => ({...adat, email}))
+    .find(x => x.nev === ugyfelNev)
+    || Object.values(ugyfelProfilok).find(x => x.nev === ugyfelNev);
+
+  const email = (ugyfelProfilok[ugyfelNev]?.email) || '';
+  const het   = ugyfelProfilok[ugyfelNev]?.het || 1;
+  const el    = document.getElementById('konzultans-chat-tartalom');
+  if (!el) return;
+
+  const osszes = JSON.parse(localStorage.getItem('chat_elozmeny_' + email) || '[]');
+
+  // Heti csoportosítás
+  const hetek = {};
+  osszes.forEach(e => {
+    const h = 'h' + (e.het || 1);
+    if (!hetek[h]) hetek[h] = [];
+    hetek[h].push(e);
+  });
+
+  const aktualisHet = het;
+  const aktualisHetiK = hetek['h' + aktualisHet] || [];
+
+  if (osszes.length === 0) {
+    el.innerHTML = `
+      <div style="text-align:center;padding:32px 20px">
+        <div style="font-size:48px;margin-bottom:12px">💬</div>
+        <div style="font-size:15px;font-weight:800;color:var(--s900);margin-bottom:8px">Még nincs chat előzmény</div>
+        <div style="font-size:13px;color:var(--s500)">Az ügyfél első AI coach kérdése itt fog megjelenni</div>
+      </div>`;
+    return;
+  }
+
+  // Generálunk AI összefoglalót az aktuális héthez
+  el.innerHTML = `<div style="padding:20px;text-align:center;color:var(--s500)">
+    <div style="font-size:24px;margin-bottom:8px">⏳</div>
+    <div style="font-size:13px">AI összefoglaló generálása a konzultációhoz...</div>
+  </div>`;
+
+  const osszefogl = await hetiChatOsszefoglalo(email, aktualisHet);
+
+  let html = `
+
+    <!-- Jogi megjegyzés -->
+    <div style="background:#fefce8;border:1px solid #fde047;border-radius:10px;
+      padding:10px 14px;margin-bottom:14px;font-size:11px;color:#713f12;line-height:1.6">
+      ⚠️ Az AI Chat tartalma NEM minősül orvosi tanácsnak — tájékoztatási célú összefoglaló.
+    </div>
+
+    <!-- AI összefoglaló az aktuális hétről -->
+    <div style="background:linear-gradient(135deg,var(--lila-v),white);
+      border:1.5px solid var(--lila-k);border-radius:var(--r);padding:18px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div style="width:36px;height:36px;border-radius:10px;background:var(--lila);
+          display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🤖</div>
+        <div>
+          <div style="font-size:13px;font-weight:800;color:var(--lila)">AI összefoglaló — konzultáció előtt</div>
+          <div style="font-size:11px;color:var(--s400)">${aktualisHet}. hét · ${aktualisHetiK.length} kérdés</div>
+        </div>
+        <div style="margin-left:auto;background:var(--lila);color:white;font-size:10px;
+          font-weight:700;padding:3px 10px;border-radius:999px">AKTUÁLIS HÉT</div>
+      </div>
+      <div style="font-size:13px;color:var(--s700);line-height:1.75;white-space:pre-line;
+        background:white;border-radius:10px;padding:14px;border:1px solid var(--lila-k)">
+        ${osszefogl || 'Ezen a héten még nem volt chat kérdés.'}
+      </div>
+    </div>
+
+    <!-- Statisztikák -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
+      <div class="k kp" style="text-align:center">
+        <div style="font-size:28px;font-weight:900;color:var(--lila)">${aktualisHetiK.length}</div>
+        <div style="font-size:11px;color:var(--s500)">ezen a héten</div>
+      </div>
+      <div class="k kp" style="text-align:center">
+        <div style="font-size:28px;font-weight:900;color:var(--kek)">${osszes.length}</div>
+        <div style="font-size:11px;color:var(--s500)">összes kérdés</div>
+      </div>
+      <div class="k kp" style="text-align:center">
+        <div style="font-size:28px;font-weight:900;color:var(--zold)">${Object.keys(hetek).length}</div>
+        <div style="font-size:11px;color:var(--s500)">aktív hét</div>
+      </div>
+    </div>
+
+    <!-- Aktuális heti teljes átirat -->
+    ${aktualisHetiK.length > 0 ? `
+    <div style="font-size:13px;font-weight:800;color:var(--s900);margin-bottom:10px">
+      📝 ${aktualisHet}. hét — teljes átirat
+    </div>
+    ${aktualisHetiK.map((e, i) => `
+      <div style="border:1.5px solid var(--lila-k);border-radius:12px;
+        padding:14px;margin-bottom:10px;background:white">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:10px;color:var(--s400)">${e.datum} ${e.ido}</div>
+          <div style="font-size:10px;font-weight:700;background:var(--lila-v);
+            color:var(--lila);padding:2px 8px;border-radius:999px">${aktualisHet}. hét</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <span style="background:var(--kek);color:white;font-size:10px;font-weight:700;
+            padding:2px 8px;border-radius:999px;flex-shrink:0;height:fit-content">KÉRDÉS</span>
+          <div style="font-size:13px;color:var(--s800);line-height:1.6;font-weight:600">${e.kerdes}</div>
+        </div>
+        ${e.valasz ? `
+        <div style="background:var(--lila-v);border-radius:8px;padding:10px;margin-top:6px">
+          <div style="display:flex;gap:8px">
+            <span style="background:var(--lila);color:white;font-size:10px;font-weight:700;
+              padding:2px 8px;border-radius:999px;flex-shrink:0;height:fit-content">ÉVA AI</span>
+            <div style="font-size:12px;color:var(--s700);line-height:1.65">${e.valasz}</div>
+          </div>
+        </div>` : ''}
+      </div>`).join('')}
+    ` : `
+    <div style="background:var(--s50);border-radius:var(--r);padding:20px;text-align:center;
+      margin-bottom:16px;color:var(--s400);font-size:13px">
+      Ezen a héten még nem volt chat kérdés.
+    </div>`}
+
+    <!-- Korábbi hetek összefoglalói -->
+    ${Object.keys(hetek).filter(h => h !== 'h'+aktualisHet).length > 0 ? `
+    <div style="font-size:13px;font-weight:800;color:var(--s900);margin:16px 0 10px">
+      📚 Korábbi hetek
+    </div>
+    ${Object.entries(hetek)
+      .filter(([h]) => h !== 'h'+aktualisHet)
+      .sort(([a],[b]) => parseInt(b.slice(1))-parseInt(a.slice(1)))
+      .map(([h, kerdesek]) => {
+        const hetSzam = h.slice(1);
+        return `
+        <div style="border:1.5px solid var(--s200);border-radius:12px;
+          padding:12px 14px;margin-bottom:8px;background:white">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-size:13px;font-weight:800;color:var(--s700)">${hetSzam}. hét</div>
+            <div style="font-size:11px;color:var(--s400)">${kerdesek.length} kérdés</div>
+          </div>
+          ${kerdesek.map(e => `
+            <div style="border-left:3px solid var(--s200);padding:6px 10px;
+              margin-bottom:6px;border-radius:0 6px 6px 0">
+              <div style="font-size:10px;color:var(--s400);margin-bottom:3px">${e.datum} ${e.ido}</div>
+              <div style="font-size:12px;font-weight:600;color:var(--s800)">${e.kerdes}</div>
+              ${e.valasz ? `<div style="font-size:11px;color:var(--s500);margin-top:4px;line-height:1.5">
+                💙 ${e.valasz.slice(0,120)}${e.valasz.length>120?'...':''}</div>` : ''}
+            </div>
+          `).join('')}
+        </div>`;
+      }).join('')}
+    ` : ''}
+  `;
+
+  el.innerHTML = html;
+}
+
+// Legacy kompatibilitás
+function chatElozményPanel(ugyfelNev) {
+  konzDoksiPanel(ugyfelNev, 'chat');
+}
+
+
 
 
 // ══════════════════════════════════════
@@ -9228,7 +9654,7 @@ function chatElozmenytMent(kerdés, valasz, ki) {
     localStorage.setItem(kulcs, JSON.stringify(meglevo));
 
     // AT-ba is mentjük ha van token
-    if (AT.token !== 'SAJAT_TOKEN_IDE') {
+    if (AT.aktiv()) {
       atPost('naplok', {
         'Ügyfél Email': u.email,
         'Ügyfél Név': u.nev || '',
@@ -9900,57 +10326,438 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 // ══ PROGRAM-SPECIFIKUS KÉRDŐÍVEK ══
 const KERDOIVEK = {
+
+  // ══════════════════════════════════════
+  // 🌿 ÉLETMÓDVÁLTÁS KÉRDŐÍV (Éva saját kérdőíve)
+  // ══════════════════════════════════════
   eletmod: {
     cim: '🌿 Életmódváltás felmérés',
     szin: 'var(--zold)',
-    kerdesek: [
-      { id:'cel',       tip:'multi',  cim:'Mi a fő célod?', valaszok:['⚖️ Fogyás','💪 Izomtömeg','⚡ Több energia','😴 Jobb alvás','🍎 Egészségesebb étkezés','🏃 Aktívabb életmód'] },
-      { id:'etrend',    tip:'single', cim:'Jelenlegi étkezési szokásod?', valaszok:['Naponta 2x eszem','Naponta 3x eszem','Naponta 4-5x eszem','Rendszertelenül eszem'] },
-      { id:'vizszokás', tip:'single', cim:'Naponta mennyi vizet iszol?', valaszok:['Kevesebb mint 1 L','1-1.5 L','1.5-2 L','Több mint 2 L'] },
-      { id:'sport',     tip:'single', cim:'Heti sportolási szokásod?', valaszok:['Nem sportolok','Hetente 1-2x','Hetente 3-4x','Naponta sportolok'] },
-      { id:'alvás',     tip:'single', cim:'Átlagosan mennyit alszol?', valaszok:['Kevesebb mint 6 óra','6-7 óra','7-8 óra','Több mint 8 óra'] },
-      { id:'stressz',   tip:'slider', cim:'Stressz szinted 1-10 skálán?', min:1, max:10, alapertek:5 },
-      { id:'etrend_kor',tip:'multi',  cim:'Van valamilyen étkezési korlátod?', valaszok:['Nincs','Vegetáriánus','Vegán','Laktóz érzékeny','Glutén érzékeny','Egyéb'] },
-      { id:'motivacio', tip:'szoveg', cim:'Mi motivál a leginkább a változásban?', placeholder:'pl. Szeretnék elfogadni magam...' },
+    leiras: 'Általános életmód- és táplálkozási állapotfelmérés',
+    szekciok: [
+      {
+        cim: '👤 Személyes adatok',
+        kerdesek: [
+          { id:'magassag',      tip:'szam',   cim:'Magasság (cm)', placeholder:'pl. 165' },
+          { id:'suly',          tip:'szam',   cim:'Testsúly (kg)', placeholder:'pl. 68' },
+          { id:'derekben',      tip:'szam',   cim:'Derékbőség cm (ha ismert)', placeholder:'pl. 82' },
+          { id:'foglalkozas',   tip:'szoveg', cim:'Foglalkozás', placeholder:'pl. irodai munka' },
+          { id:'munka_tipusa',  tip:'multi',  cim:'Milyen jellegű munkát végzel?', valaszok:['Ülőmunka','Állómunka','Fizikai munka','Váltott műszak','Éjszakai műszak'] },
+        ]
+      },
+      {
+        cim: '🎯 Célok és motiváció',
+        kerdesek: [
+          { id:'miert',         tip:'szoveg', cim:'Miért jelentkeztél a programba?', placeholder:'Meséld el...' },
+          { id:'fo_problema',   tip:'szoveg', cim:'Mi a fő probléma, amin változtatni szeretnél?', placeholder:'...' },
+          { id:'mióta',         tip:'szoveg', cim:'Mióta áll fenn ez a probléma?', placeholder:'pl. 3 éve' },
+          { id:'egeszseg_ert',  tip:'slider', cim:'Hogyan értékeled jelenlegi egészségi állapotodat?', min:1, max:10, alapertek:5 },
+          { id:'motivacio',     tip:'slider', cim:'Mennyire érzed magad motiváltnak a változtatásra?', min:1, max:10, alapertek:7 },
+          { id:'cel_3dolog',    tip:'szoveg', cim:'Mi az a 3 dolog, amin legszívesebben változtatnál?', placeholder:'1. ... 2. ... 3. ...' },
+          { id:'cel_6ho',       tip:'szoveg', cim:'Mit szeretnél elérni a következő 3-6 hónapban?', placeholder:'...' },
+        ]
+      },
+      {
+        cim: '⚖️ Testsúly és testösszetétel',
+        kerdesek: [
+          { id:'suly_legkisebb',tip:'szam',   cim:'Legkisebb felnőttkori testsúlyod (kg)', placeholder:'pl. 60' },
+          { id:'suly_legnagyobb',tip:'szam',  cim:'Legnagyobb felnőttkori testsúlyod (kg)', placeholder:'pl. 75' },
+          { id:'suly_valtozas', tip:'single', cim:'Az elmúlt 5 évben:', valaszok:['Jelentősen híztam','Jelentősen fogytam','Stabil maradt a súlyom'] },
+          { id:'fogyas_neh',    tip:'slider', cim:'Mennyire könnyű számodra a fogyás?', min:1, max:10, alapertek:5 },
+          { id:'suly_hol',      tip:'single', cim:'Hol rakódik rád leginkább a plusz súly?', valaszok:['Has','Csípő','Comb','Egyenletesen'] },
+        ]
+      },
+      {
+        cim: '🏥 Korábbi betegségek',
+        kerdesek: [
+          { id:'betegsegek',    tip:'multi',  cim:'Diagnosztizáltak nálad valaha:', valaszok:['Magas vérnyomás','Cukorbetegség','Inzulinrezisztencia','Pajzsmirigy betegség','Autoimmun betegség','IBS','Crohn-betegség','Colitis ulcerosa','Reflux','Migréen','Allergia','Asztma','Ekcéma','Pikkelysömör','Zsírmáj','Magas koleszterin','Egyik sem'] },
+          { id:'gyogyszer',     tip:'szoveg', cim:'Szedsz rendszeresen gyógyszert? Ha igen, mit?', placeholder:'pl. nem szedek' },
+          { id:'kiegeszito',    tip:'szoveg', cim:'Szedsz étrend-kiegészítőket? Ha igen, mit?', placeholder:'pl. D-vitamin, Omega-3' },
+        ]
+      },
+      {
+        cim: '⚡ Hormonális tünetek',
+        kerdesek: [
+          { id:'hormon_tunet',  tip:'multi',  cim:'Tapasztalod az alábbiakat?', valaszok:['Hajhullás','Fáradékonyság','Energiahiány','Hideg kezek-lábak','Alvászavar','Szorongás','Hangulatingadozás','Csökkent terhelhetőség','Memóriazavar','Koncentrációs nehézség','Fokozott izzadás','Egyik sem'] },
+          { id:'pajzs_vizsg',   tip:'single', cim:'Volt pajzsmirigy vizsgálatod?', valaszok:['Igen - eltérés volt','Igen - rendben volt','Nem volt'] },
+        ]
+      },
+      {
+        cim: '🍬 Vércukor és anyagcsere',
+        kerdesek: [
+          { id:'vcukor_tort',   tip:'multi',  cim:'Volt valaha:', valaszok:['Emelkedett vércukor','Emelkedett inzulin','Inzulinrezisztencia','Terheléses cukorvizsgálat','Egyik sem'] },
+          { id:'vcukor_tunet',  tip:'multi',  cim:'Tapasztalod:', valaszok:['Erős édességkívánás','Gyakori éhség','Remegés étkezések között','Délutáni energiazuhanás','Étkezés utáni álmosság','Nehéz fogyás','Egyik sem'] },
+        ]
+      },
+      {
+        cim: '🍽️ Táplálkozási szokások',
+        kerdesek: [
+          { id:'etkezes_db',    tip:'szam',   cim:'Naponta hányszor eszel?', placeholder:'pl. 3' },
+          { id:'etkezes_rend',  tip:'slider', cim:'Mennyire rendszeres az étkezésed?', min:1, max:10, alapertek:5 },
+          { id:'reggeli',       tip:'single', cim:'Reggelizel?', valaszok:['Mindig','Gyakran','Ritkán','Soha'] },
+          { id:'zoldseg',       tip:'single', cim:'Átlagosan mennyi zöldséget fogyasztasz?', valaszok:['Minden nap többször','Naponta','Hetente néhányszor','Ritkán'] },
+          { id:'gyumolcs',      tip:'single', cim:'Átlagosan mennyi gyümölcsöt fogyasztasz?', valaszok:['Naponta többször','Naponta','Hetente néhányszor','Ritkán'] },
+          { id:'feldolgozott',  tip:'single', cim:'Feldolgozott élelmiszereket fogyasztasz?', valaszok:['Gyakran','Néha','Ritkán'] },
+          { id:'cukor',         tip:'single', cim:'Cukros ételeket fogyasztasz?', valaszok:['Naponta','Hetente többször','Ritkán'] },
+          { id:'alkohol',       tip:'single', cim:'Alkoholt fogyasztasz?', valaszok:['Rendszeresen','Alkalmanként','Nem'] },
+          { id:'feherje_forras',tip:'multi',  cim:'Milyen fehérjeforrásokat fogyasztasz?', valaszok:['Tojás','Hal','Csirke','Vörös hús','Tejtermékek','Hüvelyesek','Olajos magvak'] },
+          { id:'feherje_mikor', tip:'multi',  cim:'Melyik étkezésed tartalmaz rendszeresen fehérjét?', valaszok:['Reggeli','Ebéd','Vacsora','Mindegyik'] },
+          { id:'omega3_vizsga', tip:'single', cim:'Volt Omega-3 Index vizsgálatod?', valaszok:['Igen','Nem'] },
+          { id:'omega3_hal',    tip:'single', cim:'Milyen gyakran fogyasztasz tengeri halat?', valaszok:['Heti 2-3 alkalom','Heti 1 alkalom','Havonta','Ritkán'] },
+          { id:'vizbevetel',    tip:'szam',   cim:'Napi folyadékbevitel (liter)', placeholder:'pl. 1.5' },
+        ]
+      },
+      {
+        cim: '🦠 Emésztőrendszer és bélflóra',
+        kerdesek: [
+          { id:'emesztes',      tip:'multi',  cim:'Tapasztalsz:', valaszok:['Puffadást','Székrekedést','Hasmenést','Refluxot','Hasi fájdalmat','Teltségérzést','Ételintoleranciát','Egyiket sem'] },
+          { id:'szeklet_napi',  tip:'single', cim:'Naponta van székleted?', valaszok:['Igen','Nem'] },
+          { id:'antibiotikum',  tip:'single', cim:'Volt antibiotikum kezelésed az elmúlt 3 évben?', valaszok:['Igen - 1-2x','Igen - 3+ alkalommal','Nem'] },
+        ]
+      },
+      {
+        cim: '🏃 Mozgás és alvás',
+        kerdesek: [
+          { id:'mozgas_het',    tip:'single', cim:'Hetente hányszor mozogsz?', valaszok:['Nem mozgok','1-2 alkalom','3-4 alkalom','5 vagy több alkalom'] },
+          { id:'mozgas_forma',  tip:'szoveg', cim:'Milyen mozgásformát végzel?', placeholder:'pl. séta, jóga' },
+          { id:'alvas_ora',     tip:'szam',   cim:'Átlagosan hány órát alszol?', placeholder:'pl. 7' },
+          { id:'alvas_minoseg', tip:'single', cim:'Mennyi idő alatt alszol el?', valaszok:['15 percen belül','15-30 perc','Több mint 30 perc'] },
+          { id:'alvas_kipih',   tip:'single', cim:'Kipihenten ébredsz reggel?', valaszok:['Igen','Nem'] },
+          { id:'alvas_ebredes', tip:'single', cim:'Ébredsz éjszaka?', valaszok:['Gyakran','Néha','Ritkán'] },
+        ]
+      },
+      {
+        cim: '😰 Stressz és életmód',
+        kerdesek: [
+          { id:'stressz_szint', tip:'slider', cim:'Mennyire érzed stresszesnek az életedet?', min:1, max:10, alapertek:5 },
+          { id:'tulterhelt',    tip:'slider', cim:'Mennyire érzed túlterheltnek magad?', min:1, max:10, alapertek:5 },
+          { id:'stressz_ok',    tip:'multi',  cim:'Mi okozza a legtöbb stresszt?', valaszok:['Munka','Család','Anyagi helyzet','Egészség','Párkapcsolat','Egyéb'] },
+          { id:'feltoltodes',   tip:'single', cim:'Van rendszeres feltöltődési lehetőséged?', valaszok:['Igen','Nem'] },
+        ]
+      },
+      {
+        cim: '🔬 Egyéb tényezők',
+        kerdesek: [
+          { id:'gyulladas',     tip:'multi',  cim:'Tapasztalsz:', valaszok:['Gyakori fejfájást','Ízületi panaszokat','Bőrproblémákat','Allergiát','Visszatérő fertőzéseket','Krónikus fáradtságot','Egyiket sem'] },
+          { id:'covid',         tip:'single', cim:'Átestél COVID-fertőzésen?', valaszok:['Igen - egyszer','Igen - többször','Nem','Nem tudom'] },
+          { id:'covid_valtozas',tip:'szoveg', cim:'Tapasztaltál azóta tartós változást az egészségedben? Ha igen, mit?', placeholder:'...' },
+          { id:'korny_vegyi',   tip:'single', cim:'Dolgozol rendszeresen vegyszerekkel?', valaszok:['Igen','Nem'] },
+          { id:'csaladbetegseg',tip:'multi',  cim:'Közvetlen családban előfordult:', valaszok:['Cukorbetegség','Pajzsmirigybetegség','Autoimmun betegség','Magas vérnyomás','Szív- és érrendszeri betegség','Daganatos betegség','Alzheimer-kór','Egyik sem'] },
+          { id:'megjegyzes',    tip:'szoveg', cim:'Van bármi, amit fontosnak tartasz elmondani, de nem kerülts szóba?', placeholder:'...' },
+        ]
+      },
     ]
   },
+
+  // ══════════════════════════════════════
+  // 🌸 VÁRANDÓSSÁG ELŐTTI KÉRDŐÍV (Babaváró állapotfelmérés)
+  // ══════════════════════════════════════
   elotte: {
-    cim: '🌸 Várandósság előtti felmérés',
+    cim: '🌸 Babaváró állapotfelmérés',
     szin: 'var(--rozsa)',
-    kerdesek: [
-      { id:'tervez',    tip:'single', cim:'Mióta próbálkoztok babával?', valaszok:['Most kezdjük','3-6 hónapja','6-12 hónapja','Több mint 1 éve'] },
-      { id:'ciklus',    tip:'single', cim:'Menstruációs ciklus rendszeressége?', valaszok:['Rendszeres (28-32 nap)','Kicsit rendszertelen','Rendszertelen','Nem tudom'] },
-      { id:'vitamin',   tip:'multi',  cim:'Szeded jelenleg?', valaszok:['Folsav','Vas','D-vitamin','Omega-3','Semmi','Egyéb'] },
-      { id:'etrend',    tip:'multi',  cim:'Étkezési szokások?', valaszok:['Változatos étrend','Sok feldolgozott étel','Kevés zöldség/gyümölcs','Sok cukor','Kávé naponta 2+'] },
-      { id:'stressz',   tip:'slider', cim:'Stressz szinted 1-10 skálán?', min:1, max:10, alapertek:5 },
-      { id:'cel',       tip:'szoveg', cim:'Mit szeretnél elérni a program során?', placeholder:'pl. Felkészíteni a testem a várandósságra...' },
+    leiras: 'Termékenység, hormonrendszer, életmód, táplálkozás és általános egészségi állapot felmérése',
+    szekciok: [
+      {
+        cim: '👤 Személyes adatok',
+        kerdesek: [
+          { id:'magassag',      tip:'szam',   cim:'Magasság (cm)', placeholder:'pl. 165' },
+          { id:'suly',          tip:'szam',   cim:'Testsúly (kg)', placeholder:'pl. 65' },
+          { id:'foglalkozas',   tip:'szoveg', cim:'Foglalkozás', placeholder:'...' },
+          { id:'munka_tipusa',  tip:'multi',  cim:'Milyen jellegű munkát végzel?', valaszok:['Ülőmunka','Állómunka','Fizikai munka','Váltott műszak','Éjszakai műszak'] },
+        ]
+      },
+      {
+        cim: '👶 A babavárás helyzete',
+        kerdesek: [
+          { id:'probalkozas',   tip:'single', cim:'Mióta próbálkoztok?', valaszok:['Még nem próbálkozunk','0-6 hónap','6-12 hónap','1-2 év','2 évnél hosszabb ideje'] },
+          { id:'miert_most',    tip:'szoveg', cim:'Miért most szeretnétek gyermeket?', placeholder:'...' },
+          { id:'van_gyerek',    tip:'single', cim:'Van már gyermeketek?', valaszok:['Igen','Nem'] },
+          { id:'felkeszultseg', tip:'slider', cim:'Mennyire érzed magad felkészültnek a babavárásra?', min:1, max:10, alapertek:5 },
+          { id:'felelem',       tip:'szoveg', cim:'Mitől tartasz leginkább?', placeholder:'...' },
+        ]
+      },
+      {
+        cim: '🌸 Menstruációs ciklus',
+        kerdesek: [
+          { id:'ciklus_tipus',  tip:'single', cim:'A ciklusod:', valaszok:['Rendszeres','Inkább rendszertelen','Nagyon rendszertelen'] },
+          { id:'ciklus_hossz',  tip:'szam',   cim:'Általában hány napos?', placeholder:'pl. 28' },
+          { id:'verzes_nap',    tip:'szam',   cim:'A vérzés hány napig tart?', placeholder:'pl. 5' },
+          { id:'verzes_mennyi', tip:'single', cim:'A vérzés mennyisége:', valaszok:['Gyenge','Közepes','Erős'] },
+          { id:'fajdalom',      tip:'single', cim:'Menstruációs fájdalmak:', valaszok:['Nincsenek','Enyhék','Közepesek','Erősek'] },
+          { id:'pms',           tip:'single', cim:'Tapasztalsz PMS tüneteket?', valaszok:['Igen','Nem'] },
+          { id:'pms_tipusai',   tip:'multi',  cim:'Ha igen, milyeneket?', valaszok:['Ingerlékenység','Hangulatingadozás','Mellfeszülés','Fejfájás','Migréen','Puffadás','Alvászavar','Édességkívánás'] },
+          { id:'ovulacio_ismeri',tip:'single',cim:'Ismered az ovulációd időpontját?', valaszok:['Igen','Nem'] },
+          { id:'ciklus_figyeli',tip:'single', cim:'Figyeled a ciklusodat?', valaszok:['Igen','Nem'] },
+        ]
+      },
+      {
+        cim: '🏥 Nőgyógyászati előzmények',
+        kerdesek: [
+          { id:'gynecol_diag',  tip:'multi',  cim:'Volt valaha:', valaszok:['PCOS','Endometriózis','Mióma','Petefészek-ciszta','Méhpolip','Pajzsmirigybetegség','Inzulinrezisztencia','Magas prolaktinszint','Autoimmun betegség','Egyik sem'] },
+          { id:'mutet',         tip:'single', cim:'Volt nőgyógyászati műtéted?', valaszok:['Igen','Nem'] },
+          { id:'veteles',       tip:'single', cim:'Volt vetélésed?', valaszok:['Igen','Nem'] },
+          { id:'veteles_db',    tip:'szam',   cim:'Ha igen, hány alkalommal?', placeholder:'pl. 1' },
+          { id:'mehen_kivuli',  tip:'single', cim:'Volt méhen kívüli terhességed?', valaszok:['Igen','Nem'] },
+          { id:'fogamzasgatlo', tip:'single', cim:'Szedtél valaha fogamzásgátló tablettát?', valaszok:['Igen','Nem'] },
+          { id:'fogamzasgatlo_eve',tip:'szam',cim:'Ha igen, hány évig?', placeholder:'pl. 5' },
+          { id:'fogamzasgatlo_mikor',tip:'szoveg',cim:'Mikor hagytad abba?', placeholder:'pl. 2022-ben' },
+        ]
+      },
+      {
+        cim: '⚡ Hormonális tünetek',
+        kerdesek: [
+          { id:'hormon_tunet',  tip:'multi',  cim:'Tapasztalod az alábbiakat?', valaszok:['Hajhullás','Pattanásos bőr','Zsíros bőr','Fokozott szőrnövekedés','Súlygyarapodás','Nehéz fogyás','Hasi típusú hízás','Fáradékonyság','Energiahiány','Hideg kezek-lábak','Alvászavar','Hangulatingadozás','Szorongás','Csökkent libidó','Erős PMS','Egyik sem'] },
+        ]
+      },
+      {
+        cim: '🍬 Vércukor és inzulin',
+        kerdesek: [
+          { id:'vcukor_tort',   tip:'multi',  cim:'Volt valaha:', valaszok:['Inzulinterheléses vizsgálat','Emelkedett vércukor','Emelkedett inzulin','Terhességi cukorbetegség','Egyik sem'] },
+          { id:'vcukor_tunet',  tip:'multi',  cim:'Tapasztalod:', valaszok:['Erős édességkívánás','Étkezések közötti rosszullét','Remegés','Délutáni energiazuhanás','Gyakori éhség','Nehéz fogyás','Egyiket sem'] },
+        ]
+      },
+      {
+        cim: '🔬 Kivizsgálások és laborok',
+        kerdesek: [
+          { id:'laborok',       tip:'multi',  cim:'Vizsgálták már:', valaszok:['TSH','FT3','FT4','Anti-TPO','LH','FSH','Ösztradiol','Progeszteron','Prolaktin','Tesztoszteron','AMH','D-vitamin','Ferritin','Vércukor','Inzulin','HbA1c','CRP','Homocisztein'] },
+          { id:'labor_elteresek',tip:'szoveg',cim:'Milyen eltérésekről tudsz?', placeholder:'...' },
+        ]
+      },
+      {
+        cim: '🍽️ Táplálkozás és életmód',
+        kerdesek: [
+          { id:'etkezes_db',    tip:'szam',   cim:'Naponta hányszor eszel?', placeholder:'pl. 3' },
+          { id:'zoldseg',       tip:'single', cim:'Zöldségfogyasztás:', valaszok:['Naponta','Hetente többször','Ritkán'] },
+          { id:'hal',           tip:'single', cim:'Halfogyasztás:', valaszok:['Heti 2-3 alkalom','Heti 1 alkalom','Havonta','Ritkán'] },
+          { id:'vizbevetel',    tip:'szam',   cim:'Napi folyadékbevitel (liter)', placeholder:'pl. 1.5' },
+          { id:'omega3_szed',   tip:'single', cim:'Szedsz omega-3 készítményt?', valaszok:['Igen','Nem'] },
+          { id:'kiegeszito',    tip:'szoveg', cim:'Milyen étrend-kiegészítőket szedsz?', placeholder:'...' },
+          { id:'mozgas_het',    tip:'single', cim:'Hetente hányszor mozogsz?', valaszok:['Nem mozgok','1-2 alkalom','3-4 alkalom','5+ alkalom'] },
+          { id:'alvas_ora',     tip:'szam',   cim:'Átlagosan hány órát alszol?', placeholder:'pl. 7' },
+          { id:'stressz_szint', tip:'slider', cim:'Stressz szinted (1-10)?', min:1, max:10, alapertek:5 },
+        ]
+      },
+      {
+        cim: '🦠 Emésztőrendszer',
+        kerdesek: [
+          { id:'emesztes',      tip:'multi',  cim:'Tapasztalsz:', valaszok:['Puffadást','Refluxot','Hasmenést','Székrekedést','Hasi fájdalmat','Ételintoleranciát','Egyiket sem'] },
+          { id:'antibiotikum',  tip:'single', cim:'Volt antibiotikum kezelésed az elmúlt 3 évben?', valaszok:['Igen','Nem'] },
+        ]
+      },
+      {
+        cim: '👨 A párod egészségi állapota',
+        kerdesek: [
+          { id:'par_eletkor',   tip:'szam',   cim:'A párod életkora', placeholder:'pl. 35' },
+          { id:'par_sperma',    tip:'single', cim:'Volt spermaképvizsgálata?', valaszok:['Igen - rendben','Igen - eltérés volt','Nem volt'] },
+          { id:'par_dohany',    tip:'single', cim:'Dohányzik?', valaszok:['Igen','Nem'] },
+          { id:'par_alkohol',   tip:'single', cim:'Rendszeresen fogyaszt alkoholt?', valaszok:['Igen','Nem'] },
+          { id:'par_kronikas',  tip:'szoveg', cim:'Van ismert krónikus betegsége? Ha igen, mi?', placeholder:'pl. nem' },
+        ]
+      },
+      {
+        cim: '💭 Motiváció és célok',
+        kerdesek: [
+          { id:'cel_program',   tip:'szoveg', cim:'Mi az, amiben a leginkább segítséget szeretnél?', placeholder:'...' },
+          { id:'cel_3dolog',    tip:'szoveg', cim:'Mi az a 3 dolog, amin szeretnél változtatni?', placeholder:'1. ... 2. ... 3. ...' },
+          { id:'aggodalomf',    tip:'szoveg', cim:'Mi okozza a legnagyobb aggodalmat most?', placeholder:'...' },
+          { id:'megjegyzes',    tip:'szoveg', cim:'Van bármi egyéb, amit fontosnak tartasz elmondani?', placeholder:'...' },
+        ]
+      },
     ]
   },
+
+  // ══════════════════════════════════════
+  // 🤰 VÁRANDÓSSÁG ALATT KÉRDŐÍV
+  // ══════════════════════════════════════
   alatt: {
-    cim: '🤰 Várandóssági felmérés',
+    cim: '🤰 Várandóssági állapotfelmérő',
     szin: 'var(--lila)',
-    kerdesek: [
-      { id:'het',       tip:'single', cim:'Hány hetes vagy most?', valaszok:['1-8. hét (1. trimeszter)','9-13. hét (1. trimeszter)','14-20. hét (2. trimeszter)','21-27. hét (2. trimeszter)','28+ hét (3. trimeszter)'] },
-      { id:'tünetek',   tip:'multi',  cim:'Milyen tüneteid vannak?', valaszok:['Hányinger/reggeli rosszullét','Fáradékonyság','Hátfájás','Lábdagadás','Égő gyomor','Nincs különösebb tünet'] },
-      { id:'vitamin',   tip:'multi',  cim:'Szeded jelenleg?', valaszok:['Terhességi vitamin','Folsav','Vas','Magnézium','D-vitamin','Semmi'] },
-      { id:'etrend_kor',tip:'multi',  cim:'Van ételkerülés vagy étvágytalanság?', valaszok:['Nincs','Hányástól tartok','Bizonyos szagok zavarnak','Csak bizonyos ételeket bírok','Nagyon erős sóvárgásaim vannak'] },
-      { id:'sport',     tip:'single', cim:'Sportolsz várandósan?', valaszok:['Igen, rendszeresen','Néha sétálok','Nem sportolok','Orvos tiltotta'] },
-      { id:'aggodalom', tip:'szoveg', cim:'Van valami aggodalmad az étkezéssel kapcsolatban?', placeholder:'pl. Nem tudom mennyi kalóriát vegyek be...' },
+    leiras: 'A várandósság alatti táplálkozás, egészségi állapot és életmód felmérése',
+    szekciok: [
+      {
+        cim: '👤 Személyes adatok',
+        kerdesek: [
+          { id:'magassag',      tip:'szam',   cim:'Magasság (cm)', placeholder:'pl. 165' },
+          { id:'suly_elotte',   tip:'szam',   cim:'Várandósság előtti testsúly (kg)', placeholder:'pl. 65' },
+          { id:'suly_most',     tip:'szam',   cim:'Jelenlegi testsúly (kg)', placeholder:'pl. 68' },
+          { id:'foglalkozas',   tip:'szoveg', cim:'Foglalkozás', placeholder:'...' },
+          { id:'munka_tipusa',  tip:'multi',  cim:'Munkavégzés típusa:', valaszok:['Ülőmunka','Állómunka','Fizikai munka','Váltott műszak','Jelenleg táppénzen vagyok'] },
+        ]
+      },
+      {
+        cim: '🤰 A jelenlegi várandósság',
+        kerdesek: [
+          { id:'hanyadik_vand', tip:'single', cim:'Hányadik várandósságod?', valaszok:['Első','Második','Harmadik vagy több'] },
+          { id:'hanyadik_het',  tip:'szam',   cim:'Hányadik hétben jársz?', placeholder:'pl. 18' },
+          { id:'var_datum',     tip:'szoveg', cim:'Mikorra várható a baba?', placeholder:'pl. 2025. augusztus' },
+          { id:'fogantas',      tip:'single', cim:'Spontán fogant?', valaszok:['Igen','Nem - inszeminálás','Nem - lombik','Nem - egyéb'] },
+        ]
+      },
+      {
+        cim: '📋 Előzmények',
+        kerdesek: [
+          { id:'elozmeny',      tip:'multi',  cim:'Volt korábban:', valaszok:['Vetélés','Missed ab','Méhen kívüli terhesség','Koraszülés','Terhességi cukorbetegség','Terhességi magas vérnyomás','Preeclampsia','HELLP-szindróma','Császármetszés','Szülési trauma','Egyik sem'] },
+          { id:'megjegyzes_elozmeny', tip:'szoveg', cim:'Megjegyzés az előzményekhez:', placeholder:'...' },
+        ]
+      },
+      {
+        cim: '😷 Jelenlegi panaszok',
+        kerdesek: [
+          { id:'panaszok',      tip:'multi',  cim:'Tapasztalod az alábbiakat?', valaszok:['Hányinger','Hányás','Szédülés','Gyengeség','Fokozott fáradtság','Fejfájás','Migréen','Ödéma','Reflux','Székrekedés','Hasmenés','Puffadás','Aranyér','Alvászavar','Lábgörcs','Derékfájás','Szeméremcsonti fájdalom','Hangulatingadozás','Szorongás','Egyik sem'] },
+        ]
+      },
+      {
+        cim: '🏥 Orvosi követés és laborok',
+        kerdesek: [
+          { id:'gondozas',      tip:'single', cim:'Ki gondoz?', valaszok:['Nőgyógyász','Szülésznő','Mindkettő'] },
+          { id:'vizsgalatok',   tip:'multi',  cim:'Volt eddig:', valaszok:['1. trimeszteri genetikai ultrahang','2. trimeszteri genetikai ultrahang','3. trimeszteri ultrahang','NIPT','Kombinált teszt','Egyik sem'] },
+          { id:'labor_elter',   tip:'multi',  cim:'Volt eltérés az alábbiakban?', valaszok:['Vércukor','Inzulin','Hemoglobin','Ferritin','Vas','D-vitamin','TSH','Pajzsmirigy hormonok','Vérnyomás','Egyik sem'] },
+          { id:'labor_reszletek',tip:'szoveg',cim:'Ha volt eltérés, mi az?', placeholder:'...' },
+        ]
+      },
+      {
+        cim: '🍽️ Táplálkozás',
+        kerdesek: [
+          { id:'etkezes_db',    tip:'szam',   cim:'Naponta hányszor eszel?', placeholder:'pl. 5' },
+          { id:'reggeli',       tip:'single', cim:'Reggelizel?', valaszok:['Mindig','Gyakran','Ritkán','Soha'] },
+          { id:'etkezes_rend',  tip:'slider', cim:'Mennyire rendszeres az étkezésed?', min:1, max:10, alapertek:5 },
+          { id:'vizbevetel',    tip:'szam',   cim:'Napi folyadékbevitel (liter)', placeholder:'pl. 2' },
+          { id:'italok',        tip:'multi',  cim:'Milyen italokat fogyasztasz?', valaszok:['Víz','Tea','Kávé','Üdítő','Energiaital'] },
+          { id:'feherje_mikor', tip:'single', cim:'Minden főétkezés tartalmaz fehérjét?', valaszok:['Igen','Nem'] },
+          { id:'feherje_forras',tip:'multi',  cim:'Fehérjeforrások:', valaszok:['Tojás','Hal','Csirke','Vörös hús','Tejtermékek','Hüvelyesek','Olajos magvak'] },
+          { id:'zoldseg',       tip:'single', cim:'Zöldségfogyasztás naponta:', valaszok:['Keveset','Közepes mennyiséget','Sokat'] },
+          { id:'kívánósság',    tip:'szoveg', cim:'Tapasztalsz kívánósságot? Ha igen, mire?', placeholder:'pl. savanyúra' },
+          { id:'ételundor',     tip:'szoveg', cim:'Tapasztalsz ételundort? Ha igen, mire?', placeholder:'pl. húsra' },
+        ]
+      },
+      {
+        cim: '💊 Étrend-kiegészítők',
+        kerdesek: [
+          { id:'vitaminok',     tip:'multi',  cim:'Szeded az alábbiakat?', valaszok:['Magzatvédő vitamin','D-vitamin','Omega-3','Magnézium','Vas','Probiotikum','Kolin','Jód','Egyéb'] },
+          { id:'kiegeszito_pontosan',tip:'szoveg',cim:'Milyen készítményeket szedsz pontosan?', placeholder:'...' },
+        ]
+      },
+      {
+        cim: '🦠 Emésztőrendszer',
+        kerdesek: [
+          { id:'szeklet_gyak',  tip:'single', cim:'Milyen gyakran van székleted?', valaszok:['Naponta','2-3 naponta','Ritkábban'] },
+          { id:'emesztes',      tip:'multi',  cim:'Tapasztalsz:', valaszok:['Puffadást','Refluxot','Gyomorégést','Székrekedést','Hasmenést','Hasi görcsöket','Egyiket sem'] },
+        ]
+      },
+      {
+        cim: '🏃 Mozgás és alvás',
+        kerdesek: [
+          { id:'mozgas_het',    tip:'single', cim:'Hetente hányszor mozogsz?', valaszok:['Nem mozgok','1-2 alkalom','3-4 alkalom','5+ alkalom'] },
+          { id:'mozgas_forma',  tip:'multi',  cim:'Milyen mozgásformát végzel?', valaszok:['Séta','Kismamatorna','Jóga','Úszás','Futás','Erősítés','Egyéb'] },
+          { id:'alvas_ora',     tip:'szam',   cim:'Átlagosan hány órát alszol?', placeholder:'pl. 7' },
+          { id:'alvas_kipih',   tip:'single', cim:'Kipihenten ébredsz?', valaszok:['Igen','Nem'] },
+          { id:'alvas_ebredes', tip:'single', cim:'Ébredsz éjszaka?', valaszok:['Gyakran','Néha','Ritkán'] },
+        ]
+      },
+      {
+        cim: '😰 Stressz és érzelmi állapot',
+        kerdesek: [
+          { id:'stressz_szint', tip:'slider', cim:'Mennyire érzed magad stresszesnek?', min:1, max:10, alapertek:5 },
+          { id:'stressz_ok',    tip:'multi',  cim:'Mi okozza jelenleg a legtöbb stresszt?', valaszok:['Munka','Anyagi helyzet','Párkapcsolat','Egészség','A szüléstől való félelem','Korábbi veszteség','Egyéb'] },
+          { id:'szules_var',    tip:'slider', cim:'Mennyire várod a szülést?', min:1, max:10, alapertek:7 },
+          { id:'szules_felelem',tip:'szoveg', cim:'Mi az, amitől leginkább tartasz?', placeholder:'...' },
+        ]
+      },
+      {
+        cim: '🏥 Szüléssel kapcsolatos elképzelések',
+        kerdesek: [
+          { id:'szulesi_terv',  tip:'single', cim:'Van szülési terved?', valaszok:['Igen','Nem'] },
+          { id:'szules_tipusa', tip:'single', cim:'Milyen szülést szeretnél?', valaszok:['Természetes','Epidurállal','Mindegy, csak biztonságos','Még nem tudom'] },
+          { id:'szulesfegykeszito',tip:'single',cim:'Jártál szülésfelkészítőn?', valaszok:['Igen','Nem'] },
+        ]
+      },
+      {
+        cim: '💭 Célok',
+        kerdesek: [
+          { id:'miert_jott',    tip:'szoveg', cim:'Miért jelentkeztél hozzám?', placeholder:'...' },
+          { id:'segitseg',      tip:'szoveg', cim:'Miben szeretnél leginkább segítséget kapni?', placeholder:'...' },
+          { id:'cel_3dolog',    tip:'szoveg', cim:'Mi az a 3 dolog, amin szeretnél javítani?', placeholder:'1. ... 2. ... 3. ...' },
+          { id:'megjegyzes',    tip:'szoveg', cim:'Van bármi egyéb, amit fontosnak tartasz?', placeholder:'...' },
+        ]
+      },
     ]
   },
-  utan: {
-    cim: '👶 Szülés utáni felmérés',
+
+  // ══════════════════════════════════════
+  // 👶 GYEREKÁGY IDŐSZAK KÉRDŐÍV
+  // ══════════════════════════════════════
+  gyerekágy: {
+    cim: '👶 Gyerekágy időszak felmérés',
     szin: 'var(--narancs)',
-    kerdesek: [
-      { id:'szules',    tip:'single', cim:'Mikor volt a szülés?', valaszok:['Kevesebb mint 6 hete','6-12 hete','3-6 hónapja','Több mint 6 hónapja'] },
-      { id:'szoptat',   tip:'single', cim:'Szoptatsz?', valaszok:['Igen, kizárólag szoptatás','Igen, vegyes táplálás','Nem, tápszer'] },
-      { id:'alvás',     tip:'single', cim:'Átlagos alvásminőség?', valaszok:['Nagyon rossz (2-3 óra)','Rossz (4-5 óra)','Töredezett de elmegy','Elég jó (6+ óra)'] },
-      { id:'cel',       tip:'multi',  cim:'Mi a fő célod most?', valaszok:['Visszanyerni a formám','Több energiát','Szoptatáshoz táplálkozni','Egészségesebben enni','Stresszkezelés'] },
-      { id:'test',      tip:'multi',  cim:'Milyen panaszaid vannak?', valaszok:['Nincs','Hasi izmok gyengesége','Hátfájás','Energiahiány','Hajhullás','Baby blues/hangulati problémák'] },
-      { id:'segitseg',  tip:'szoveg', cim:'Miben szeretnél most a legtöbb segítséget?', placeholder:'pl. Nem tudok rendszeresen enni a babával...' },
+    leiras: 'Szülés utáni táplálkozás, közérzet és életmód felmérése',
+    szekciok: [
+      {
+        cim: '👤 Alapadatok',
+        kerdesek: [
+          { id:'szules_mikor',  tip:'single', cim:'Mikor volt a szülés?', valaszok:['Kevesebb mint 6 hete','6-12 hete','3-6 hónapja','Több mint 6 hónapja'] },
+          { id:'szules_mod',    tip:'single', cim:'Hogyan szültél?', valaszok:['Természetes úton','Császármetszéssel','Sürgősségi császárral'] },
+          { id:'szoptat',       tip:'single', cim:'Szoptatsz?', valaszok:['Igen - kizárólag szoptatás','Igen - vegyes táplálás','Nem - tápszer'] },
+          { id:'magassag',      tip:'szam',   cim:'Magasság (cm)', placeholder:'pl. 165' },
+          { id:'suly_most',     tip:'szam',   cim:'Jelenlegi testsúly (kg)', placeholder:'pl. 70' },
+        ]
+      },
+      {
+        cim: '💙 Közérzet és hangulat',
+        kerdesek: [
+          { id:'altalanos_kozerz',tip:'slider',cim:'Általános közérzeted (1-10)?', min:1, max:10, alapertek:5 },
+          { id:'hangulat',      tip:'single', cim:'Hogyan jellemeznéd az általános hangulatodat?', valaszok:['Jó, boldognak érzem magam','Változékony','Nehéz időszak, sokszor sírok','Depressziósnak érzem magam'] },
+          { id:'alvas_ora',     tip:'szam',   cim:'Átlagosan hány órát alszol összesen?', placeholder:'pl. 5' },
+          { id:'energia',       tip:'slider', cim:'Energiaszinted (1-10)?', min:1, max:10, alapertek:5 },
+          { id:'panaszok',      tip:'multi',  cim:'Tapasztalsz:', valaszok:['Extrém fáradtság','Hajhullás','Ízületi fájdalom','Sebes mellbimbó','Mastitis (mellgyulladás)','Székrekedés','Aranyér','Hüvelyi szárazság','Vizeletvesztés','Sebfájdalom','Baby blues','Szorongás','Egyik sem'] },
+        ]
+      },
+      {
+        cim: '🍽️ Táplálkozás szoptatás alatt',
+        kerdesek: [
+          { id:'etkezes_db',    tip:'szam',   cim:'Naponta hányszor eszel?', placeholder:'pl. 4' },
+          { id:'vizbevetel',    tip:'szam',   cim:'Napi folyadékbevitel (liter)', placeholder:'pl. 2.5' },
+          { id:'reggeli',       tip:'single', cim:'Reggelizel?', valaszok:['Mindig','Általában','Ritkán','Sosem'] },
+          { id:'feherje_forras',tip:'multi',  cim:'Fehérjeforrások:', valaszok:['Tojás','Hal','Csirke','Vörös hús','Tejtermékek','Hüvelyesek','Olajos magvak'] },
+          { id:'zoldseg',       tip:'single', cim:'Zöldségfogyasztás:', valaszok:['Sokat','Közepes mennyiséget','Keveset'] },
+          { id:'kiegeszito',    tip:'szoveg', cim:'Milyen étrend-kiegészítőket szedsz?', placeholder:'pl. D-vitamin, omega-3' },
+          { id:'vitaminok',     tip:'multi',  cim:'Szeded az alábbiakat?', valaszok:['D-vitamin','Omega-3 / DHA','Vas','Jód','Magnézium','Probiotikum','B12','Egyik sem'] },
+        ]
+      },
+      {
+        cim: '🦠 Emésztőrendszer',
+        kerdesek: [
+          { id:'szeklet_gyak',  tip:'single', cim:'Milyen gyakran van székleted?', valaszok:['Naponta','2-3 naponta','Ritkábban'] },
+          { id:'emesztes',      tip:'multi',  cim:'Tapasztalsz:', valaszok:['Puffadást','Székrekedést','Refluxot','Hasmenést','Egyiket sem'] },
+        ]
+      },
+      {
+        cim: '🏃 Mozgás',
+        kerdesek: [
+          { id:'mozgas_het',    tip:'single', cim:'Hetente hányszor mozogsz?', valaszok:['Nem mozgok','1-2 alkalom','3-4 alkalom','5+ alkalom'] },
+          { id:'mozgas_forma',  tip:'szoveg', cim:'Milyen mozgásformát végzel?', placeholder:'pl. séta a babával' },
+        ]
+      },
+      {
+        cim: '👨‍👩‍👧 Támogatás és környezet',
+        kerdesek: [
+          { id:'tamogato',      tip:'multi',  cim:'Ki tud rád számottevően segíteni?', valaszok:['Partner','Nagyszülők','Testvér','Barátok','Senki'] },
+          { id:'partner_resz',  tip:'slider', cim:'A partnered mennyire vesz részt a gondozásban?', min:1, max:10, alapertek:5 },
+        ]
+      },
+      {
+        cim: '💭 Célok és motiváció',
+        kerdesek: [
+          { id:'fo_cel',        tip:'multi',  cim:'Mi a fő célod most?', valaszok:['Visszanyerni a formám','Több energiát','Szoptatáshoz optimálisan táplálkozni','Egészségesebben enni','Stresszkezelés','Hangulat javítása'] },
+          { id:'segitseg',      tip:'szoveg', cim:'Miben szeretnél leginkább segítséget?', placeholder:'...' },
+          { id:'nehezseg',      tip:'szoveg', cim:'Mi a legnagyobb nehézség most?', placeholder:'...' },
+          { id:'megjegyzes',    tip:'szoveg', cim:'Van bármi egyéb, amit fontosnak tartasz?', placeholder:'...' },
+        ]
+      },
     ]
-  }
+  },
+
 };
+
 
 let aktualisKerdoiv = null;
 let kerdoivValaszok = {};
@@ -9968,6 +10775,331 @@ function kerdoivMegnyit(ugyfelNev) {
 }
 
 let aktualisKerdesIdx = 0;
+
+
+// ══════════════════════════════════════
+// 📋 ÚJ KÉRDŐÍV RENDSZER — Szekciós, teljes kérdőívek
+// ══════════════════════════════════════
+
+let aktualisKerdoivAdatok = {
+  program:   '',
+  ugyfelNev: '',
+  valaszok:  {},
+  aktualisSzekcio: 0,
+};
+
+// Kérdőív megnyitása — konzultáns hívja az ügyfélnél
+function kerdoivMegnyit(ugyfelNev) {
+  const profil = ugyfelProfilok[ugyfelNev];
+  if (!profil) { toast('⚠️ Ügyfél profil nem található'); return; }
+
+  const prog = profil.program || 'eletmod';
+  const kv   = KERDOIVEK[prog];
+  if (!kv) { toast('⚠️ Nincs kérdőív ehhez a programhoz'); return; }
+
+  // Meglévő válaszok betöltése
+  const mentett = localStorage.getItem('kerdoiv_' + ugyfelNev);
+  aktualisKerdoivAdatok = {
+    program:         prog,
+    ugyfelNev:       ugyfelNev,
+    valaszok:        mentett ? JSON.parse(mentett) : {},
+    aktualisSzekcio: 0,
+  };
+
+  kerdoivSzekcioRender(0);
+  oldal('o-kerdoiv');
+}
+
+// Ügyfél saját kérdőívét nézheti (csak olvasás)
+function kerdoivUgyfelNez() {
+  const u = bejelentkezettUser;
+  if (!u) return;
+  const mentett = localStorage.getItem('kerdoiv_' + u.nev);
+  if (!mentett) {
+    toast('📋 A kérdőíved még nincs kitöltve — a konzultánsod fogja kitölteni veled.');
+    return;
+  }
+  aktualisKerdoivAdatok = {
+    program:         u.program,
+    ugyfelNev:       u.nev,
+    valaszok:        JSON.parse(mentett),
+    aktualisSzekcio: 0,
+    csak_olvasas:    true,
+  };
+  kerdoivSzekcioRender(0);
+  oldal('o-kerdoiv');
+}
+
+function kerdoivSzekcioRender(szekcioIdx) {
+  aktualisKerdoivAdatok.aktualisSzekcio = szekcioIdx;
+  const kv = KERDOIVEK[aktualisKerdoivAdatok.program];
+  const szek = kv.szekciok[szekcioIdx];
+  const ossz = kv.szekciok.length;
+  const csak_olvasas = aktualisKerdoivAdatok.csak_olvasas;
+  const el = document.getElementById('kerdoiv-tartalom');
+  if (!el || !szek) return;
+
+  // Fejléc frissítés
+  const cimEl = document.getElementById('kerdoiv-cim');
+  const lepEl  = document.getElementById('kerdoiv-lep');
+  const progEl = document.getElementById('kerdoiv-progress');
+  if (cimEl) cimEl.textContent = kv.cim;
+  if (lepEl) lepEl.textContent = (szekcioIdx+1) + ' / ' + ossz + ' szekció';
+  if (progEl) progEl.style.width = Math.round(((szekcioIdx+1)/ossz)*100) + '%';
+
+  // Szekció tartalom renderelése
+  let html = `
+    <div style="background:linear-gradient(135deg,${kv.szin}22,white);
+      border:1.5px solid ${kv.szin}44;border-radius:var(--r);
+      padding:14px 16px;margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;color:${kv.szin};text-transform:uppercase;
+        letter-spacing:.06em;margin-bottom:4px">${kv.cim}</div>
+      <div style="font-size:16px;font-weight:900;color:var(--s900)">${szek.cim}</div>
+      ${csak_olvasas ? '<div style="font-size:11px;color:var(--s400);margin-top:4px">👁️ Csak olvasás — a konzultánsod töltötte ki</div>' : ''}
+    </div>
+  `;
+
+  szek.kerdesek.forEach((k, i) => {
+    const val = aktualisKerdoivAdatok.valaszok[k.id];
+    html += kerdoivKerdesHTML(k, val, csak_olvasas, kv.szin);
+  });
+
+  el.innerHTML = html;
+
+  // Navigáció
+  const elozBtn = document.getElementById('kerdoiv-eloz');
+  const kovBtn  = document.getElementById('kerdoiv-kov');
+  if (elozBtn) elozBtn.style.display = szekcioIdx === 0 ? 'none' : 'flex';
+  if (kovBtn) {
+    const utolso = szekcioIdx >= ossz - 1;
+    kovBtn.innerHTML = utolso
+      ? (csak_olvasas ? '<span>← Vissza</span>' : '<span>✅ Kérdőív befejezése</span><span>🏁</span>')
+      : '<span>Következő szekció</span><span>→</span>';
+    kovBtn.style.background = utolso && !csak_olvasas
+      ? 'linear-gradient(135deg,var(--zold),#16a34a)'
+      : `linear-gradient(135deg,${kv.szin},${kv.szin})`;
+  }
+}
+
+function kerdoivKerdesHTML(k, val, csak_olvasas, szin) {
+  let html = `<div style="margin-bottom:18px">
+    <div style="font-size:14px;font-weight:700;color:var(--s900);margin-bottom:8px;line-height:1.5">
+      ${k.cim}
+    </div>`;
+
+  if (k.tip === 'szam') {
+    html += `<input type="number" id="kv-${k.id}" value="${val||''}"
+      placeholder="${k.placeholder||''}"
+      ${csak_olvasas ? 'disabled' : ''}
+      oninput="kerdoivValaszMent('${k.id}',this.value)"
+      style="width:100%;padding:11px 14px;border:2px solid var(--s200);border-radius:10px;
+      font-size:15px;font-weight:700;outline:none;${csak_olvasas?'background:var(--s50);color:var(--s600)':''}">`;
+
+  } else if (k.tip === 'szoveg') {
+    html += `<textarea id="kv-${k.id}" rows="3"
+      placeholder="${k.placeholder||''}"
+      ${csak_olvasas ? 'readonly' : ''}
+      oninput="kerdoivValaszMent('${k.id}',this.value)"
+      style="width:100%;padding:11px 14px;border:2px solid var(--s200);border-radius:10px;
+      font-size:14px;font-family:inherit;outline:none;resize:none;line-height:1.6;
+      ${csak_olvasas?'background:var(--s50);color:var(--s600)':''}"
+    >${val||''}</textarea>`;
+
+  } else if (k.tip === 'slider') {
+    const ert = val || k.alapertek || 5;
+    html += `<div style="padding:8px 0">
+      <div style="text-align:center;font-size:36px;font-weight:900;color:${szin};margin-bottom:12px"
+        id="slider-${k.id}">${ert}</div>
+      <input type="range" min="${k.min||1}" max="${k.max||10}" value="${ert}"
+        ${csak_olvasas ? 'disabled' : ''}
+        oninput="document.getElementById('slider-${k.id}').textContent=this.value;kerdoivValaszMent('${k.id}',parseInt(this.value))"
+        style="width:100%;accent-color:${szin};height:6px;cursor:${csak_olvasas?'default':'pointer'}">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--s400);margin-top:4px">
+        <span>${k.min||1}</span><span>${k.max||10}</span>
+      </div>
+    </div>`;
+
+  } else if (k.tip === 'single') {
+    html += `<div style="display:flex;flex-direction:column;gap:6px">`;
+    k.valaszok.forEach((v, oi) => {
+      const aktiv = val === v;
+      html += `<button ${csak_olvasas ? '' : `onclick="kerdoivValaszMent('${k.id}','${v.replace(/'/g,"&#39;")}');kerdoivSzekcioRender(aktualisKerdoivAdatok.aktualisSzekcio)"`}
+        style="padding:11px 16px;border-radius:10px;text-align:left;cursor:${csak_olvasas?'default':'pointer'};
+        border:2px solid ${aktiv?szin:'var(--s200)'};
+        background:${aktiv?szin+'22':'white'};
+        font-size:13px;font-weight:${aktiv?'700':'500'};
+        color:${aktiv?'var(--s900)':'var(--s600)'};transition:all .15s;
+        display:flex;align-items:center;gap:10px">
+        <span style="width:18px;height:18px;border-radius:50%;border:2px solid ${aktiv?szin:'var(--s300)'};
+          background:${aktiv?szin:'white'};flex-shrink:0;display:flex;align-items:center;
+          justify-content:center;font-size:10px;color:white">${aktiv?'✓':''}</span>
+        ${v}
+      </button>`;
+    });
+    html += `</div>`;
+
+  } else if (k.tip === 'multi') {
+    const aktiv_lista = Array.isArray(val) ? val : [];
+    html += `<div style="display:flex;flex-direction:column;gap:6px">`;
+    k.valaszok.forEach((v) => {
+      const aktiv = aktiv_lista.includes(v);
+      html += `<button ${csak_olvasas ? '' : `onclick="kerdoivMultiToggle('${k.id}','${v.replace(/'/g,"&#39;")}')"`}
+        style="padding:10px 14px;border-radius:9px;text-align:left;cursor:${csak_olvasas?'default':'pointer'};
+        border:2px solid ${aktiv?szin:'var(--s200)'};
+        background:${aktiv?szin+'22':'white'};
+        font-size:13px;font-weight:${aktiv?'700':'400'};
+        color:${aktiv?'var(--s900)':'var(--s600)'};transition:all .15s;
+        display:flex;align-items:center;gap:10px">
+        <span style="width:18px;height:18px;border-radius:4px;border:2px solid ${aktiv?szin:'var(--s300)'};
+          background:${aktiv?szin:'white'};flex-shrink:0;display:flex;align-items:center;
+          justify-content:center;font-size:10px;color:white">${aktiv?'✓':''}</span>
+        ${v}
+      </button>`;
+    });
+    html += `</div>`;
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+function kerdoivValaszMent(id, ertek) {
+  aktualisKerdoivAdatok.valaszok[id] = ertek;
+  localStorage.setItem('kerdoiv_' + aktualisKerdoivAdatok.ugyfelNev,
+    JSON.stringify(aktualisKerdoivAdatok.valaszok));
+  // AT-ba is ha van token
+  if (AT.aktiv()) {
+    // Debouncolt mentés
+    clearTimeout(window._kv_timer);
+    window._kv_timer = setTimeout(() => {
+      atPatch('felhasznalok', ugyfelProfilok[aktualisKerdoivAdatok.ugyfelNev]?.atRecordId || '',
+        { 'Kérdőív adatok': JSON.stringify(aktualisKerdoivAdatok.valaszok) }).catch(()=>{});
+    }, 2000);
+  }
+}
+
+function kerdoivMultiToggle(id, ertek) {
+  const lista = Array.isArray(aktualisKerdoivAdatok.valaszok[id])
+    ? [...aktualisKerdoivAdatok.valaszok[id]] : [];
+  const i = lista.indexOf(ertek);
+  if (i >= 0) lista.splice(i, 1);
+  else lista.push(ertek);
+  kerdoivValaszMent(id, lista);
+  kerdoivSzekcioRender(aktualisKerdoivAdatok.aktualisSzekcio);
+}
+
+function kerdoivKov() {
+  const kv = KERDOIVEK[aktualisKerdoivAdatok.program];
+  const szekIdx = aktualisKerdoivAdatok.aktualisSzekcio;
+  const ossz = kv.szekciok.length;
+
+  // Szöveg mezők mentése
+  const szek = kv.szekciok[szekIdx];
+  szek.kerdesek.forEach(k => {
+    if (k.tip === 'szoveg' || k.tip === 'szam') {
+      const el = document.getElementById('kv-' + k.id);
+      if (el && el.value) kerdoivValaszMent(k.id, el.value);
+    }
+  });
+
+  if (aktualisKerdoivAdatok.csak_olvasas || szekIdx >= ossz - 1) {
+    // Befejezés
+    kerdoivBefejezes();
+  } else {
+    kerdoivSzekcioRender(szekIdx + 1);
+    // Görgetés az elejére
+    document.getElementById('kerdoiv-tartalom')?.scrollIntoView({behavior:'smooth'});
+  }
+}
+
+function kerdoivEloz() {
+  const idx = aktualisKerdoivAdatok.aktualisSzekcio;
+  if (idx > 0) {
+    kerdoivSzekcioRender(idx - 1);
+    document.getElementById('kerdoiv-tartalom')?.scrollIntoView({behavior:'smooth'});
+  }
+}
+
+function kerdoivBefejezes() {
+  const nev = aktualisKerdoivAdatok.ugyfelNev;
+  if (!aktualisKerdoivAdatok.csak_olvasas) {
+    // Mentés
+    localStorage.setItem('kerdoiv_' + nev, JSON.stringify(aktualisKerdoivAdatok.valaszok));
+    if (ugyfelProfilok[nev]) {
+      ugyfelProfilok[nev].kerdoiv      = aktualisKerdoivAdatok.valaszok;
+      ugyfelProfilok[nev].kerdoivDatum = new Date().toLocaleDateString('hu-HU');
+    }
+    toast('✅ Kérdőív elmentve! 💙', 'z');
+    setTimeout(() => vissza(), 1500);
+  } else {
+    vissza();
+  }
+}
+
+// Kérdőív összefoglaló oldal (konzultáns látja)
+function kerdoivOsszefoglalo(ugyfelNev) {
+  const profil = ugyfelProfilok[ugyfelNev] || {};
+  const prog   = profil.program || 'eletmod';
+  const kv     = KERDOIVEK[prog];
+  const mentett = localStorage.getItem('kerdoiv_' + ugyfelNev);
+  const valaszok = mentett ? JSON.parse(mentett) : {};
+
+  const el = document.getElementById('konzultans-chat-elozmeny');
+  if (!el) return;
+
+  if (Object.keys(valaszok).length === 0) {
+    el.innerHTML = `<div style="text-align:center;padding:32px;color:var(--s400)">
+      <div style="font-size:36px;margin-bottom:10px">📋</div>
+      <div style="font-size:14px">A kérdőív még nincs kitöltve</div>
+      <button onclick="kerdoivMegnyit('${ugyfelNev}')" class="gomb g-kek" style="margin-top:16px">
+        <span>📝 Kérdőív kitöltése most</span>
+      </button>
+    </div>`;
+    return;
+  }
+
+  let html = `
+    <div style="background:linear-gradient(135deg,${kv.szin}22,white);
+      border:1.5px solid ${kv.szin}44;border-radius:var(--r);padding:16px;margin-bottom:14px">
+      <div style="font-size:12px;color:${kv.szin};font-weight:700">${kv.cim}</div>
+      <div style="font-size:14px;font-weight:900;color:var(--s900)">${ugyfelNev} — kérdőív összefoglalója</div>
+      <div style="font-size:11px;color:var(--s400);margin-top:4px">
+        ${profil.kerdoivDatum || 'Kitöltve'} · ${Object.keys(valaszok).length} kérdés megválaszolva
+      </div>
+    </div>`;
+
+  kv.szekciok.forEach(szek => {
+    const vanValasz = szek.kerdesek.some(k => valaszok[k.id] !== undefined && valaszok[k.id] !== '');
+    if (!vanValasz) return;
+
+    html += `<div style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:800;color:${kv.szin};margin-bottom:8px;
+        text-transform:uppercase;letter-spacing:.05em">${szek.cim}</div>`;
+
+    szek.kerdesek.forEach(k => {
+      const val = valaszok[k.id];
+      if (!val && val !== 0) return;
+      const valStr = Array.isArray(val) ? val.join(', ') : String(val);
+      if (!valStr || valStr === 'undefined') return;
+
+      html += `<div style="padding:8px 12px;background:var(--s50);border-radius:8px;
+        margin-bottom:6px;border-left:3px solid ${kv.szin}44">
+        <div style="font-size:10px;color:var(--s400);margin-bottom:3px">${k.cim}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--s800)">${valStr}</div>
+      </div>`;
+    });
+
+    html += `</div>`;
+  });
+
+  html += `<div style="display:flex;gap:8px;margin-top:14px">
+    <button onclick="kerdoivMegnyit('${ugyfelNev}')" class="gomb g-kek" style="flex:1">
+      <span>✏️ Módosítás</span>
+    </button>
+  </div>`;
+
+  el.innerHTML = html;
+}
 
 function kerdoivRender(idx) {
   aktualisKerdesIdx = idx;
