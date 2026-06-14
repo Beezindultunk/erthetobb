@@ -5907,6 +5907,8 @@ const EMAILJS_CONFIG = {
   serviceId:  localStorage.getItem('emailjs_service') || 'service_lk4izwl',
   publicKey:  localStorage.getItem('emailjs_key')     || 'XCQistcUODAJGCH86',
   templates: {
+    // FIGYELEM: a template_e1sg0pb sablonban a "To Email" mezőt
+    // át kell írni {{konzultans_email}}-re hogy az ügyfélnek is menjen!
     uj_ugyfel:    'template_e1sg0pb',
     blues_alert:  'template_dctkkwf',
     program_vege: 'template_e1sg0pb',
@@ -6064,6 +6066,150 @@ if (localStorage.getItem('push_aktiv') && Notification.permission === 'granted')
 // 📅 AUTOMATIKUS HÉT LÉPTETŐ
 // ══════════════════════════════════════
 
+async 
+// ══════════════════════════════════════
+// 📧 HETI EMAIL AZ ÜGYFÉLNEK
+// ══════════════════════════════════════
+
+// Lecke témák programonként
+const HETI_TEMAK = {
+  eletmod: [
+    '', // placeholder (het 0 nincs)
+    { cim:'Miért nem a kalória a lényeg?',       tema:'Kalória vs. élelmiszerminőség, reggeli fehérje, gyulladás, alvás és víz alapjai' },
+    { cim:'Zsírok, Omega-3 és fehérje',           tema:'Jó zsírok, Omega-3 vs Omega-6 arány, fehérjeszükséglet és vércukor stabilitás' },
+    { cim:'Méregtelenítés és bélflóra',           tema:'Máj méregtelenítés, probiotikumok, glutén hatása, cukor csökkentése, D-vitamin és magnézium' },
+    { cim:'Stressz, alvás és kortizol',           tema:'Kortizol hatása, stresszkezelés, magnézium-biszglicinát, alvás optimalizálása' },
+    { cim:'Hormonok és pajzsmirigy',              tema:'Ösztrogén egyensúly, xenoösztrogének, pajzsmirigy, vérvizsgálat kiértékelés' },
+    { cim:'Mozgás és aktivitás',                  tema:'Megfelelő mozgásformák, erősítés vs. kardió, napi lépések, regeneráció' },
+    { cim:'Személyre szabott protokoll',          tema:'Az eddig tanultak összefoglalása, táplálékkiegészítők véglegesítése, célok kitűzése' },
+    { cim:'Mélyebb méregtelenítés',               tema:'Máj II. fázis, szulfuráció, metilálás, bélflóra és immunrendszer kapcsolata' },
+    { cim:'Xenoösztrogének és környezet',         tema:'BPA, parabének, peszticidek hatása, természetes alternatívák a mindennapokban' },
+    { cim:'Táplálékkiegészítők és IDA vitaminok', tema:'Személyre szabott vitamin protokoll véglegesítése, szinergizmus és antagonizmus' },
+    { cim:'Összesítés és lezárás előkészítése',   tema:'12 hetes eredmények összefoglalása, következő lépések megtervezése' },
+    { cim:'Program lezárás és ünneplés',          tema:'Gratulálunk! Megcsináltad a 12 hetes Életmódváltás programot!' },
+  ],
+  elotte: [
+    '',
+    { cim:'Termékenység és alapok',               tema:'Petesejt érlelési idő, folsav kritikus szerepe, inzulinrezisztencia és PCOS kapcsolata' },
+    { cim:'Hormonrendszer és tápanyagok',          tema:'Progeszteron, ösztrogén, pajzsmirigy, jód, szelén és cink fontossága' },
+    { cim:'Bélflóra és termékenység',             tema:'Estrobolome, fermentált ételek, omega-3 és a petesejt minősége' },
+    { cim:'D-vitamin, vas és magnézium',           tema:'D-vitamin receptorok a petefészekben, ferritin optimum, magnézium-biszglicinát' },
+    { cim:'Méregtelenítés és xenoösztrogének',     tema:'Máj méregtelenítés, BPA és parabének kerülése, természetes alternatívák' },
+    { cim:'Stressz, kortizol és a ciklus',         tema:'Stressz hatása az ovulációra, magnézium, adaptogének, légzőgyakorlatok' },
+    { cim:'Inzulinrezisztencia és PCOS',           tema:'Inzulinstabilizáló étrend, mio-inozitol, PCOS-barát táplálkozás' },
+    { cim:'Végső felkészülés és labortervek',      tema:'Optimális labortervek, kiegészítő protokoll véglegesítése, célok kitűzése' },
+  ],
+  alatt: [
+    '',
+    { cim:'Terhességi táplálkozás alapjai',       tema:'Extra kalóriaigény, kerülendő halak, vas kritikus szerepe, folsav vs. folát' },
+    { cim:'Hányinger és első trimeszter',         tema:'Reggeli fehérje stratégia, gyömbér, hyperemesis jelek, mikor orvoshoz' },
+    { cim:'DHA és agy fejlődés',                  tema:'Omega-3 DHA fontossága, biztonságos halak, algaolaj alternativa' },
+    { cim:'Vércukor és terhességi cukorbetegség', tema:'GDM szűrés, étkezési stratégia, étkezés utáni séta, alacsony GI ételek' },
+    { cim:'Kalcium, D-vitamin, magnézium',        tema:'Kalcium csontokból elvonás megelőzése, D3+K2, magnézium lábgörcs ellen' },
+    { cim:'Mozgás, stressz és fekvési pozíció',   tema:'Biztonságos mozgásformák, kortizol és baba, bal oldali fekvés' },
+    { cim:'Szülésre felkészülés — táplálkozás',  tema:'Datolya és méhnyak érés, vas és fehérje a szüléshez, tejtermelés beindítása' },
+    { cim:'Összefoglalás és szoptatásra készülés',tema:'Legfontosabb tápanyagok összefoglalva, DHA, jód, kolin a szoptatáshoz' },
+  ],
+  'gyerekágy': [
+    '',
+    { cim:'Szülés utáni regeneráció',             tema:'Vashiány felismerése, 3 liter folyadék, magas biológiai értékű fehérjék' },
+    { cim:'Szoptatás és anyatej minősége',        tema:'DHA, jód, D-vitamin az anyatejben, tejmennyiség növelése, megfelelő szoptatás' },
+    { cim:'Baby blues és hangulat',               tema:'Baby blues vs. PPD különbség, omega-3 és D-vitamin hangulatera, mikor orvoshoz' },
+    { cim:'Vas és energia visszanyerése',          tema:'Ferritin vizsgálat, C-vitamin a vas felszívódáshoz, hem-vas vs. non-hem vas' },
+    { cim:'Bélflóra és immunitás',                tema:'Szülés utáni bélflóra helyreállítása, fermentált ételek, probiotikum + prebiotikum' },
+    { cim:'D-vitamin és magnézium szülés után',   tema:'D-vitamin a babának, magnézium alváshiány és szorongás ellen, optimális szintek' },
+    { cim:'Pajzsmirigy és hormonális helyreállás',tema:'Postpartum thyroiditis, jód-szelén-cink, menstruáció visszatérése' },
+    { cim:'Mozgás és medencefenék',               tema:'Visszatérés sporthoz, diastasis recti, Kegel-gyakorlatok, medencefenék fizikoterápia' },
+    { cim:'Energia és önellátás',                 tema:'Anya jólléte = legjobb anyaság, alvásstratégia, energia visszaszerzés' },
+    { cim:'Immunrendszer és hajhullás',           tema:'Telogen effluvium természetes, ferritin, biotin és cink a hajhoz' },
+    { cim:'Kapcsolat és érzelmi egészség',        tema:'Oxitocin és kötődés, PPD vészjelek, partner szerepe, segítség elfogadása' },
+    { cim:'Program lezárás',                      tema:'Gratulálunk! Elvégezted a Gyerekágy programot! A tanultak egy életre szólnak.' },
+  ],
+};
+
+// Előző hét lecke kulcspontjai
+function eloHetOsszefoglalo(program, het) {
+  const temak = HETI_TEMAK[program] || HETI_TEMAK.eletmod;
+  const eloHet = temak[het] || null;
+  if (!eloHet) return '';
+  return `📚 ${eloHet.cim}\n\n${eloHet.tema}`;
+}
+
+// Következő hét előnézete
+function kovetkezoHetElonezet(program, ujHet) {
+  const temak = HETI_TEMAK[program] || HETI_TEMAK.eletmod;
+  const kovHet = temak[ujHet] || null;
+  if (!kovHet) return '';
+  return `🔜 ${kovHet.cim}\n\n${kovHet.tema}`;
+}
+
+async function hetiEmailKuld(u, regiHet, ujHet) {
+  if (!u.email || u.email.includes('@demo.')) return; // demo ügyfeleknél kihagyja
+
+  const PROG_NEV = {
+    eletmod:   'Életmódváltás',
+    elotte:    'Várandósság előtt',
+    alatt:     'Várandósság alatt',
+    'gyerekágy': 'Gyerekágy időszak',
+  };
+
+  // Ellenőrzés: küldtük-e már erre a hétre?
+  const kulcs = 'heti_email_kuldve_' + u.email + '_het' + ujHet;
+  if (localStorage.getItem(kulcs)) return;
+
+  const eloOssz = eloHetOsszefoglalo(u.program, regiHet);
+  const kovElonezet = kovetkezoHetElonezet(u.program, ujHet);
+  const maxHet = (u.program === 'elotte' || u.program === 'alatt') ? 8 : 12;
+
+  // Email szöveg összeállítása
+  const emailSzoveg = `Szia ${u.nev}!
+
+🎉 Elindult a ${ujHet}. heted a ${PROG_NEV[u.program] || u.program} programban!
+
+${eloOssz ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📖 MÚLT HÉT ÖSSZEFOGLALÓJA (${regiHet}. hét)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${eloOssz}
+
+` : ''}━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔜 EZT TANULOD EZEN A HÉTEN (${ujHet}. hét)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${kovElonezet}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ ERRE FIGYELJ EZEN A HÉTEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Olvasd el a mai leckét (+10 pont)
+• Töltsd ki a napi kvízt (+15-25 pont)
+• Pipáld ki a napi szokásaidat (+20 pont)
+• Töltsd ki a naplót (+15 pont)
+
+Hajrá, ${ujHet}. hét! 💙
+Éva`;
+
+  try {
+    if (!window.emailjs || !EMAILJS_CONFIG.publicKey) return;
+    await window.emailjs.send(
+      EMAILJS_CONFIG.serviceId,
+      'template_e1sg0pb',
+      {
+        konzultans_email: u.email,  // az ügyfél emailjére megy
+        ugyfel_nev:   u.nev,
+        ugyfel_email: u.email,
+        program_nev:  PROG_NEV[u.program] || u.program,
+        datum:        new Date().toLocaleDateString('hu-HU'),
+        extra:        emailSzoveg,
+        name:         'Széplábi Éva — Érthetőbb Egészség',
+        email:        'szeplabieva@gmail.com',
+      }
+    );
+    localStorage.setItem(kulcs, new Date().toISOString());
+    console.log('✅ Heti email elküldve:', u.nev, ujHet + '. hét');
+  } catch(e) {
+    console.log('❌ Heti email hiba:', e);
+  }
+}
+
 async function hetLepteto() {
   const u = bejelentkezettUser;
   if (!u || u.szerep !== 'ugyfel') return;
@@ -6099,6 +6245,9 @@ async function hetLepteto() {
         pushKuld('🎉 Új hét!', szamitottHet + '. hét kezdődik! Nézd meg az új leckédet!');
         toast('🎉 ' + szamitottHet + '. hét kezdődött! Új lecke vár rád!', 'z');
       }, 2000);
+
+      // Heti email az ügyfélnek — előző hét összefoglalójával
+      setTimeout(() => hetiEmailKuld(u, regiHet, szamitottHet), 4000);
     }
 
     // Ha program vége
@@ -7798,6 +7947,9 @@ function bluesEredmenyMutat(ossz) {
 
 const KVIZ_ADATBAZIS = {
 
+  // ══════════════════════════════════════
+  // 🌿 ÉLETMÓDVÁLTÁS — 7 hét × 3 kérdés = 39 kérdés (meglévő)
+  // ══════════════════════════════════════
   eletmod: [
     {
       het: 1,
@@ -7927,122 +8079,500 @@ const KVIZ_ADATBAZIS = {
     },
   ],
 
+  // ══════════════════════════════════════
+  // 🌸 VÁRANDÓSSÁG ELŐTT — 8 hét × 3 kérdés
+  // ══════════════════════════════════════
   elotte: [
     {
-      het: 1,
-      cim: 'Termékenység és táplálkozás',
+      het: 1, cim: 'Termékenység és táplálkozás',
       kerdesek: [
         { k:'Mennyi ideig érlelődik egy petesejt a szervezetben?',
           opt:['1-2 nap','1-2 hét','90-120 nap','1 év'],
-          helyes: 2,
-          magyarazat:'A petesejtnek 90-120 napra van szüksége az éréshez! Ez azt jelenti, amit ma eszel, az 3-4 hónap múlva befolyásolja a petesejt minőségét.' },
-        { k:'Melyik étel a legjobb folát forrás?',
-          opt:['🍞 Teljes kiőrlésű kenyér','🫀 Máj, tojás, sötétzöld levelesek, avokádó','🍊 Narancs','🥛 Tej'],
-          helyes: 1,
-          magyarazat:'A máj kiemelkedő folát forrás — 100g csirkemáj a napi szükséglet 3-4-szeresét tartalmazza. Tojásban, avokádóban, spenótban is sok van.' },
-        { k:'Mi okozhatja az inzulinrezisztenciát és hogyan befolyásolja a termékenységet?',
-          opt:['Túl sok zöldség evése','Magas szénhidrát/cukor bevitel → magas inzulin → magas tesztoszteron → PCOS','Túl kevés alvás (nem befolyásolja)','Csak genetikai tényező'],
-          helyes: 1,
-          magyarazat:'Az inzulinrezisztencia az egyik leggyakoribb fogamzási akadály. Magas szénhidrátbevitel → magas inzulin → magas tesztoszteron → rendszertelen ciklus, PCOS.' },
+          helyes:2,
+          magyarazat:'A petesejtnek 90-120 napra van szüksége az éréshez. Amit most eszel, az 3-4 hónap múlva befolyásolja a petesejt minőségét — ezért fontos már most elkezdeni a tudatos táplálkozást.' },
+        { k:'Melyik vitamin kritikusan fontos már a fogamzás ELŐTT is?',
+          opt:['C-vitamin','A-vitamin','Folsav (B9)','K-vitamin'],
+          helyes:2,
+          magyarazat:'Az idegsőcső az első 28 napban záródik — sokszor még mielőtt tudnád hogy terhes vagy. Ezért kell a folsavat már a fogamzás előtt 3 hónappal elkezdeni szedni.' },
+        { k:'Mi okoz leggyakrabban rendszertelen ciklust?',
+          opt:['Túl sok zöldség evése','Magas szénhidrát és cukorfogyasztás → magas inzulin → PCOS','Túl kevés kávé','D-vitamin túladagolás'],
+          helyes:1,
+          magyarazat:'A magas szénhidrát- és cukorfogyasztás megemeli az inzulinszintet, ami magas tesztoszteronszinthez vezethet — ez az egyik leggyakoribb oka a PCOS-nak és a rendszertelen ciklusnak.' },
       ]
     },
     {
-      het: 2,
-      cim: 'Vitaminok fogamzáshoz',
+      het: 2, cim: 'Hormonrendszer és tápanyagok',
       kerdesek: [
-        { k:'Miért kritikus a folsav a fogamzás ELŐTT is szedni?',
-          opt:['Csak terhesség alatt kell','Mert az idegcső az első 28 napban záródik — még mielőtt tudod hogy terhes vagy','Csak a baba születése után fontos','Nincs bizonyított hatása'],
-          helyes: 1,
-          magyarazat:'Az idegsőcső az első 28 napban záródik — amikor sokan még nem is tudják hogy terhesek! Ezért a fogamzás ELŐTT legalább 3 hónappal kell kezdeni a folsav szedését.' },
-        { k:'Mi az MTHFR génvariáns és miért fontos?',
-          opt:['Nem létező fogalom','Génvariáns ami miatt sokan nem tudják feldolgozni a szintetikus folsavat — metilfolát kell helyette','Egy betegség neve','Egy vitamin típus'],
-          helyes: 1,
-          magyarazat:'Az MTHFR C677T génvariáns a népesség ~40%-ánál jelen van. Ezek az emberek nem tudják hatékonyan feldolgozni a szintetikus folsavat — aktív metilfolátot kell szedniük.' },
-        { k:'Melyik vitamin hiánya okozhat szabálytalan ciklust?',
-          opt:['C-vitamin','D3 vitamin — részt vesz a progeszteron termelésben','A-vitamin','K-vitamin'],
-          helyes: 1,
-          magyarazat:'A D3 vitamin receptorai szinte minden sejtben megtalálhatók, beleértve a petefészket is. D3 hiány rendszertelen ciklust, progeszteron hiányt és fogamzási nehézséget okozhat.' },
+        { k:'Melyik ásványi anyag elengedhetetlen a pajzsmirigy egészséges működéséhez?',
+          opt:['Kalcium','Jód és szelén','Magnézium','Cink'],
+          helyes:1,
+          magyarazat:'A pajzsmirigy hormonok előállításához jód szükséges, a szelén pedig a hormonok aktiválásához. Hiányuk rendszertelen ciklust, fáradtságot és fogamzási nehézséget okozhat.' },
+        { k:'Mi a progeszteron fő szerepe a ciklusban?',
+          opt:['A petesejt érlelése','A méhnyálkahártya fenntartása beágyazódás után','A vérzés megindítása','A tejtermelés szabályozása'],
+          helyes:1,
+          magyarazat:'A progeszteron a ciklus második felében termelődik és feladata fenntartani a méhnyálkahártyát, hogy a megtermékenyített petesejt be tudjon ágyazódni. Ha alacsony, nehéz megtartani a terhességet.' },
+        { k:'Melyik tápanyag segíti legjobban az ösztrogén lebontását a szervezetben?',
+          opt:['Cukor','Keresztesvirágú zöldségek (brokkoli, karfiol)','Tejszín','Fehér kenyér'],
+          helyes:1,
+          magyarazat:'A brokkoli, karfiol és káposzta DIM nevű vegyületet tartalmaz, amely segít a máj ösztrogén-metabolizmusában. Ez egyensúlyt teremt a hormonok között és csökkenti az ösztrogén dominanciát.' },
+      ]
+    },
+    {
+      het: 3, cim: 'Bélflóra és termékenység',
+      kerdesek: [
+        { k:'Hogyan befolyásolja a bélflóra a hormonrendszert?',
+          opt:['Nem befolyásolja','Az ösztrogén egy részét a bélbaktériumok szabályozzák','Csak az emésztésért felelős','Nincs kapcsolat'],
+          helyes:1,
+          magyarazat:'Az "estrobolome" — a bélflóra ösztrogén-szabályozó része — az ösztrogén recirkulációját vezérli. Ha a bélflóra egyensúlya felborul, ösztrogén dominancia vagy hiány alakulhat ki.' },
+        { k:'Melyik étel támogatja legjobban a bélflórát termékenységi szempontból?',
+          opt:['Fehér kenyér és tészta','Fermentált ételek: kefir, savanyú káposzta, kovászos uborka','Feldolgozott hús','Üdítők'],
+          helyes:1,
+          magyarazat:'A fermentált ételek élő probiotikus baktériumokat tartalmaznak. Ezek egyensúlyban tartják a bélflórát, csökkentik a gyulladást és segítenek a hormonok megfelelő metabolizmusában.' },
+        { k:'Mi az egyik legjobb dolog amit tehetsz a petesejtjeid minőségéért?',
+          opt:['Sok koffein fogyasztás','Omega-3 zsírsavak rendszeres bevitele','Cukros sportitalok','Napraforgóolaj-fogyasztás'],
+          helyes:1,
+          magyarazat:'Az omega-3 zsírsavak — különösen a DHA — a petesejt sejtmembránjának alapvető építőkövei. Rendszeres fogyasztásuk javítja a petesejt minőségét és az ovuláció szabályosságát.' },
+      ]
+    },
+    {
+      het: 4, cim: 'D-vitamin, vas és egyéb kulcstápanyagok',
+      kerdesek: [
+        { k:'Miért kritikus a D-vitamin a termékenység szempontjából?',
+          opt:['Csak a csontokhoz kell','Receptorai a petefészekben is vannak, szabályozza az ovulációt','Nincs köze a termékenységhez','Csak férfiaknál fontos'],
+          helyes:1,
+          magyarazat:'A D-vitamin receptorai a petefészekben, a méhben és az immunsejtekben is megtalálhatók. Hiánya összefügg a rendszertelen ovulációval, PCOS-sal és a beágyazódási nehézségekkel.' },
+        { k:'Miért fontos a vasszint a fogamzás előtt?',
+          opt:['Csak a vérzéshez kell','Vashiány rendszertelen ovulációt okozhat és rontja a petesejt minőségét','Felesleges figyelni rá','Csak terhesség alatt kell'],
+          helyes:1,
+          magyarazat:'Vas szükséges az ovulációhoz és a méhnyálkahártya felépítéséhez. Vashiányos vérszegénység megnöveli a meddőség kockázatát. Ferritinszint 50 felett az ideális fogamzás előtt.' },
+        { k:'Melyik a legjobban felszívódó magnézium típus?',
+          opt:['Magnézium-oxid','Magnézium-biszglicinát','Magnézium-szulfát','Mindegy, ugyanaz'],
+          helyes:1,
+          magyarazat:'A magnézium-biszglicinát a legjobban felszívódó forma, legkevésbé hashajtó hatású és a glicinát rész külön is segíti az alvást és az idegrendszer nyugtatását.' },
+      ]
+    },
+    {
+      het: 5, cim: 'Méregtelenítés és xenoösztrogének',
+      kerdesek: [
+        { k:'Mi a xenoösztrogén?',
+          opt:['Természetes növényi hormon','Szintetikus ösztrogénhatású anyag műanyagban, kozmetikumban','Gyógyszer típus','Étrend-kiegészítő'],
+          helyes:1,
+          magyarazat:'A xenoösztrogének szintetikus vegyületek, amelyek utánozzák az ösztrogén hatását. BPA (műanyag), parabén (kozmetikum) és peszticidek formájában jutnak be a szervezetbe, megzavarva a hormonális egyensúlyt.' },
+        { k:'Melyik étel segíti a legjobban a máj méregtelenítését?',
+          opt:['Fehér kenyér','Cékla, brokkoli, fokhagyma, citrom','Tejszínes ételek','Instant élelmiszerek'],
+          helyes:1,
+          magyarazat:'A cékla betain tartalma, a brokkoli DIM-je, a fokhagyma allicinja és a citrom C-vitaminja mind a máj I. és II. fázisú méregtelenítési folyamatait támogatják — ezzel segítve a hormonok lebontását.' },
+        { k:'Hogyan csökkenthetők a xenoösztrogének bevitele a mindennapokban?',
+          opt:['Több műanyagból enni és inni','Üveg és rozsdamentes acél használata, természetes kozmetikumok','Több feldolgozott étel','Ez nem befolyásolható'],
+          helyes:1,
+          magyarazat:'Üveg vagy rozsdamentes acél tárolók, természetes alapú kozmetikumok és tisztítószerek, BPA-mentes termékek és bio élelmiszerek mind csökkentik a xenoösztrogének terhelést a szervezeten.' },
+      ]
+    },
+    {
+      het: 6, cim: 'Stressz, kortizol és a ciklus',
+      kerdesek: [
+        { k:'Hogyan hat a krónikus stressz a menstruációs ciklusra?',
+          opt:['Egyáltalán nem hat rá','A magas kortizol blokkolhatja az ovulációt és megrövidítheti a luteális fázist','Gyorsítja az ovulációt','Szabályossá teszi a ciklust'],
+          helyes:1,
+          magyarazat:'A stresszhormon (kortizol) és a nemi hormonok ugyanabból az előanyagból (pregnenolon) keletkeznek. Krónikus stressznél a szervezet a kortizoltermelést részesíti előnyben — ez "kortizol-lopás" — és csökken a progeszteron és ösztrogén termelés.' },
+        { k:'Mi az egyik leghatékonyabb természetes stresszcsökkentő módszer?',
+          opt:['Cukorevés','Mélylégzés és séta a természetben','Koffein fogyasztás fokozása','Éjszakai tévénézés'],
+          helyes:1,
+          magyarazat:'A mélylégzés (lassú, mély kilégzéssel) aktiválja a paraszimpatikus idegrendszert, csökkenti a kortizolszintet. A természetben séta bizonyítottan 20 perc alatt csökkenti a stresszmarkereket.' },
+        { k:'Miért fontos a magnézium stresszes időszakokban?',
+          opt:['Nincs szerepe','A stressz magnéziumot éget fel, ami szorongást, alvászavart és görcsöket okoz','Csak izomépítéshez kell','Csak étkezés után kell'],
+          helyes:1,
+          magyarazat:'Stressz hatására a szervezet több magnéziumot ürít a vizelettel. A magnéziumhiány szorongást, alvászavart, izomgörcsöt és PMS tüneteket okoz — ördögi kör alakul ki.' },
+      ]
+    },
+    {
+      het: 7, cim: 'Inzulinrezisztencia és PCOS',
+      kerdesek: [
+        { k:'Mi az inzulinrezisztencia és hogyan hat a termékenységre?',
+          opt:['Nincs hatása a termékenységre','A sejtek nem reagálnak az inzulinra, magas lesz a tesztoszteron, és rendszertelen az ovuláció','Csak cukorbetegeknél fordul elő','Csak testsúlygyarapodást okoz'],
+          helyes:1,
+          magyarazat:'Inzulinrezisztenciánál a hasnyálmirigy egyre több inzulint termel. A magas inzulin fokozza az androgéntermelést, ami rendszertelen ovulációhoz, PCOS-hoz és fogamzási nehézségekhez vezet.' },
+        { k:'Mi az egyik leghatékonyabb étrendi változtatás PCOS esetén?',
+          opt:['Több kenyér és tészta','Fehérje és rost minden étkezésnél, finomított szénhidrátok elhagyása','Több cukor','Gyümölcslevek fogyasztása'],
+          helyes:1,
+          magyarazat:'PCOS esetén az inzulinszint stabilizálása a kulcs. Fehérje és rost minden étkezésnél lassítja a cukor felszívódást. A finomított szénhidrátok (kenyér, tészta, cukor) elhagyása az egyik legtöbbet vizsgált és leghatékonyabb beavatkozás.' },
+        { k:'Melyik tápanyag bizonyítottan javítja az inzulinérzékenységet PCOS-ban?',
+          opt:['Cukor','Inozitol (különösen mio-inozitol)','Glutén','Napraforgóolaj'],
+          helyes:1,
+          magyarazat:'A mio-inozitol számos kutatásban javította az inzulinérzékenységet, szabályosabbá tette a ciklust és javította a petesejt minőségét PCOS-ban. Természetes forrása a citrusfélék héja, a bab és a dió.' },
+      ]
+    },
+    {
+      het: 8, cim: 'Végső összefoglalás',
+      kerdesek: [
+        { k:'Mi az "ideális" meddőségi kivizsgálás minimuma nők esetén?',
+          opt:['Csak hőmérséklet mérés','AMH, FSH, LH, ösztradiol, progeszteron, pajzsmirigy (TSH, FT3, FT4, anti-TPO), D-vitamin, ferritin, vércukor, inzulin','Csak vérvétel','Elegendő az ultrahang'],
+          helyes:1,
+          magyarazat:'Az átfogó kivizsgálás magában foglalja a petefészek tartalékát (AMH), a ciklus hormonjait, a pajzsmirigy funkcióját, a gyulladásos markereket és az anyagcsere mutatóit. Csak ezek együttes értékelése ad teljes képet.' },
+        { k:'Melyik az egyik legfontosabb dolog amit megtehetsz a petesejtek védelméért?',
+          opt:['Sok alkohol','Rendszeres omega-3 bevitel, D-vitamin, folsav és stresszcsökkentés','Koffein növelés','Cukor fogyasztás'],
+          helyes:1,
+          magyarazat:'A petesejtek védelme komplex: omega-3 a sejtmembránért, D-vitamin a hormonszabályozásért, folsav a DNS javításáért, antioxidánsok a szabad gyökök ellen, stresszcsökkentés a kortizol ellen.' },
+        { k:'Hogyan hat a testzsírszázalék a termékenységre?',
+          opt:['Egyáltalán nem hat','Sem a túl alacsony (12% alatt), sem a túl magas testzsír nem kedvező — mindkettő zavarhatja az ovulációt','Minél kevesebb a jobb','Minél több a jobb'],
+          helyes:1,
+          magyarazat:'A zsírszövet ösztrogént termel. Túl kevés testzsírnál elmarad az ovuláció (amenorrhea). Túl sok testzsírnál ösztrogén dominancia alakul ki. Az ideális tartomány 20-30% nőknél a reproduktív korra.' },
       ]
     },
   ],
 
+  // ══════════════════════════════════════
+  // 🤰 VÁRANDÓSSÁG ALATT — 8 hét × 3 kérdés
+  // ══════════════════════════════════════
   alatt: [
     {
-      het: 1,
-      cim: 'Terhességi táplálkozás alapjai',
+      het: 1, cim: 'Terhességi táplálkozás alapjai',
       kerdesek: [
         { k:'Mennyi extra kalóriára van szükség az első trimeszterben?',
           opt:['Semennyi — az igény nem változik az 1. trimeszterben','Napi +300 kcal','Napi +500 kcal','Napi +1000 kcal (kettőre kell enni)'],
-          helyes: 0,
+          helyes:0,
           magyarazat:'Az első trimeszterben szinte semmi extra energiaszükséglet nincs! A "kettőre kell enni" mítosz. A minőség fontosabb mint a mennyiség — különösen az első 12 hétben.' },
         { k:'Melyik halat KELL kerülni terhességben?',
-          opt:['🐟 Lazac és szardínia','🐋 Tonhal, kardhal, cápa — magas higany tartalom','🦐 Garnélarák','🐠 Pisztráng'],
-          helyes: 1,
-          magyarazat:'A nagy ragadozó halak (tonhal, kardhal, cápa) a táplálékláncban felgyülemlik a higany. A lazac, szardínia, makréla biztonságos és omega-3-ban gazdag.' },
+          opt:['Lazac és szardínia','Tonhal, kardhal, cápa — magas higanytartalom','Garnélarák','Pisztráng'],
+          helyes:1,
+          magyarazat:'A nagy ragadozó halakban (tonhal, kardhal, cápa) felgyülemlik a higany, ami káros a baba idegrendszerére. A lazac, szardínia, makréla biztonságos és omega-3-ban gazdag.' },
         { k:'Miért kritikus a vas terhességben?',
-          opt:['Csak a hajnövéshez kell','A vérképzéshez és a placenta fejlődéséhez — a vérmennyiség 50%-kal nő terhességben','Csak az édesanya számára fontos','Csak az utolsó trimeszterben szükséges'],
-          helyes: 1,
-          magyarazat:'Terhességben a vérmennyiség 50%-kal nő! A baba és a placenta fejlődéséhez is rengeteg vas kell. Vashiány fáradtságot, légszomjat és koraszülési kockázatot okozhat.' },
+          opt:['Csak a hajhoz kell','A vérmennyiség 50%-kal nő — a baba és a placenta fejlődéséhez rengeteg vas kell','Csak az utolsó trimeszterben számít','Nincs különösebb szerepe'],
+          helyes:1,
+          magyarazat:'Terhességben a vérmennyiség 50%-kal nő. A baba és a placenta fejlődéséhez is rengeteg vas szükséges. Vashiány fáradtságot, légszomjat és koraszülési kockázatot okozhat.' },
       ]
     },
     {
-      het: 2,
-      cim: 'Hányinger és tünetek kezelése',
+      het: 2, cim: 'Hányinger és első trimeszter',
       kerdesek: [
         { k:'Mi a legjobb étrendi stratégia reggeli rosszullét ellen?',
-          opt:['Éhgyomorra maradni és kerülni az evést','Fehérje és zsír kombinációja, soha ne legyél üres gyomorral','Sok kenyér és keksz evése','Koffein fogyasztás'],
-          helyes: 1,
+          opt:['Éhgyomorra maradni','Fehérje és zsír minden étkezésnél, soha ne legyél üres gyomorral','Sok keksz és kenyér','Sok gyümölcslé'],
+          helyes:1,
           magyarazat:'Az üres gyomor rosszabbítja a hányingert. A fehérje és zsír lassítja a gyomor ürülését és stabilizálja a vércukrot — ez csökkenti a hányingert. Ébredés előtt egyél néhány mandulát.' },
-        { k:'Mi segíthet a terhességi égő gyomor ellen?',
-          opt:['Nagy étkezések ritkábban','Kis, fehérjedús étkezések sűrűbben, lefekvés előtt 3 órával ne egyél','Sok gyümölcslé ivása','Pikáns ételek evése'],
-          helyes: 1,
-          magyarazat:'A nagy étkezések nyomást gyakorolnak a gyomorra. Kis, sűrű étkezések (5-6x/nap), lefekvés előtt 3 órával semmi evés, és az alvási pozíció (kissé emelt fej) sokat segít.' },
         { k:'Melyik természetes szer bizonyítottan segít a terhességi hányinger ellen?',
-          opt:['🍺 Sör','🫚 Gyömbér tea és citromos víz','☕ Kávé','🍬 Cukorka'],
-          helyes: 1,
+          opt:['Kávé','Gyömbér tea és citromos víz','Üdítő','Cukorka'],
+          helyes:1,
           magyarazat:'A gyömbér klinikai vizsgálatokban bizonyítottan csökkenti a terhességi hányingert. Friss gyömbér tea, gyömbéres víz vagy gyömbér kapszula formájában alkalmazható.' },
+        { k:'Mikor kell feltétlenül orvoshoz fordulni hányinger esetén?',
+          opt:['Ha egyszer hányunk','Ha naponta többször hányunk és nem tudunk enni vagy inni — ez hyperemesis gravidarum lehet','Ha reggelente rosszul vagyunk','Ha nem szedünk gyógyszert'],
+          helyes:1,
+          magyarazat:'A hyperemesis gravidarum súlyos terhességi hányinger, amely kiszáradást, elektrolitzavart és súlycsökkenést okoz. Kórházi kezelést igényelhet. Ha 48 óra alatt nem tartasz bent folyadékot, azonnal orvoshoz kell menni.' },
+      ]
+    },
+    {
+      het: 3, cim: 'DHA, omega-3 és agy fejlődés',
+      kerdesek: [
+        { k:'Miért különösen fontos a DHA terhesség alatt?',
+          opt:['Csak az anya számára kell','A baba agyának és szemének fejlődéséhez elengedhetetlen — különösen az utolsó trimeszterben','Csak az izomfejlődéshez kell','Nincs különösebb szerepe'],
+          helyes:1,
+          magyarazat:'A DHA (dokozahexaénsav) az agy és a retina alapvető építőköve. A baba agya az utolsó trimeszterben és az első 2 évben fejlődik a legintenzívebben. Anya DHA bevitele közvetlenül befolyásolja a baba kognitív fejlődését.' },
+        { k:'Melyik hal a legjobb DHA forrás terhesség alatt?',
+          opt:['Tonhal (kerülendő a higany miatt)','Lazac, szardínia, makréla — alacsony higany, magas DHA','Rák és kagyló','Tőkehal'],
+          helyes:1,
+          magyarazat:'A lazac, szardínia és makréla alacsony higanyterhelésű, magas DHA tartalmú halak. Hetente 2-3 adag fogyasztása biztonságos és ajánlott terhesség alatt.' },
+        { k:'Ha nem eszel halat, hogyan pótolhatod a DHA-t?',
+          opt:['Nem lehet pótolni','Alga alapú omega-3 kiegészítővel — a DHA eredetileg is algákból kerül a halakba','Lenmaggal (az ALA nem konvertálódik hatékonyan)','Dióval'],
+          helyes:1,
+          magyarazat:'Az algaolaj DHA a legegyenesebb forrás — a halak is algákból kapják a DHA-t. Vegetáriánusok és vegánok számára ez az egyetlen direkt DHA forrás, amelyre a baba agyfejlődéséhez szükség van.' },
+      ]
+    },
+    {
+      het: 4, cim: 'Vércukor és terhességi cukorbetegség',
+      kerdesek: [
+        { k:'Mikor szokták szűrni a terhességi cukorbetegséget?',
+          opt:['Az első trimeszterben','A 24-28. héten cukorterheléses vizsgálattal','A szülés előtt','Nem szokták szűrni'],
+          helyes:1,
+          magyarazat:'A terhességi cukorbetegség (GDM) szűrése általában a 24-28. héten történik cukorterheléses vizsgálattal (OGTT). Kockázati csoportokban korábban is elvégezhetik.' },
+        { k:'Hogyan lehet csökkenteni a terhességi cukorbetegség kockázatát?',
+          opt:['Sok gyümölcslé ivásával','Fehérjével kezdeni minden étkezést, kerülni a finomított szénhidrátokat, rendszeresen sétálni','Több cukor evésével','Kevesebbet aludni'],
+          helyes:1,
+          magyarazat:'A fehérjés étkezés, a zöldség és rost prioritás, a cukros és feldolgozott ételek kerülése, valamint a mérsékelt testmozgás bizonyítottan csökkentik a GDM kockázatát.' },
+        { k:'Mi segít legjobban az étkezés utáni vércukor-emelkedés ellen terhesség alatt?',
+          opt:['Étkezés után lefeküdni','Rövid, 10-15 perces séta étkezés után','Édesség evése','Sok gyümölcs'],
+          helyes:1,
+          magyarazat:'Kutatások szerint már egy 10-15 perces séta étkezés után 20-30%-kal csökkenti az étkezés utáni vércukor-emelkedést. Ez terhesség alatt különösen hatékony és biztonságos módszer.' },
+      ]
+    },
+    {
+      het: 5, cim: 'Kalcium, D-vitamin, magnézium',
+      kerdesek: [
+        { k:'Miért fontos a kalcium terhesség alatt?',
+          opt:['Csak az anya fogaihoz kell','A baba csontjaihoz és fogaihoz szükséges — ha nem elég az étrendből, a baba az anyától vonja el','Csak szoptatás alatt kell','Nincs különösebb szerepe'],
+          helyes:1,
+          magyarazat:'Ha nem veszel be elég kalciumot, a szervezet a baba fejlődéséhez az anyai csontokból vonja ki. Jó kalciumforrás: szardínia csontostul, görög joghurt, sötét zöld levelesek, mandula.' },
+        { k:'Mire jó a magnézium terhesség alatt?',
+          opt:['Semmire','Lábgörcsök, alvászavar és ödéma csökkentésére — és segíti a baba idegrendszerének fejlődését','Csak fáradtság ellen','Csak szülés után kell'],
+          helyes:1,
+          magyarazat:'A magnézium az egyik leggyakrabban hiányos ásványi anyag terhesség alatt. Hiánya lábgörcsöket, alvászavart, szorongást és magas vérnyomást okoz. Este bevéve segíti az elalvást és az izomlazítást.' },
+        { k:'Miért kell D3 vitamint K2-vel együtt szedni?',
+          opt:['Nem kell együtt szedni','A K2 segíti a kalciumot a csontokba juttatni és megelőzi az erekben való lerakódást','Csak az íze jobb','Véletlen ajánlás'],
+          helyes:1,
+          magyarazat:'A D3-vitamin növeli a kalcium felszívódását. A K2-vitamin (MK-7 forma) irányítja a kalciumot a csontokba és fogakba, és megelőzi, hogy az erekbe és lágyszövetekbe rakódjon le.' },
+      ]
+    },
+    {
+      het: 6, cim: 'Légzés, stressz és mozgás',
+      kerdesek: [
+        { k:'Melyik mozgásforma a legbiztonságosabb az egész terhesség alatt?',
+          opt:['Nehéz súlyemelés','Gyaloglás és kismamatorna — alacsony intenzitású, stabilitást javító mozgásformák','Ugrókötelezés','Hasizom-sorozatok'],
+          helyes:1,
+          magyarazat:'A gyaloglás, úszás, jóga és kismamatorna biztonságos és ajánlott mozgásformák az egész terhesség alatt. Csökkentik a GDM kockázatát, javítják az alvást és felkészítik a testet a szülésre.' },
+        { k:'Hogyan hat a krónikus stressz a babára?',
+          opt:['Egyáltalán nem hat','A magas kortizol átjuthat a placentán és befolyásolhatja a baba stresszrendszerének fejlődését','Csak az anyának ártalmas','Jót tesz a babának'],
+          helyes:1,
+          magyarazat:'A kortizol részben átjut a placentán. Kutatások szerint a tartós stressz befolyásolja a baba HPA tengelyének (stresszrendszer) fejlődését, és magasabb stresszérzékenységgel hozható összefüggésbe.' },
+        { k:'Melyik a legjobb fekvési pozíció a 3. trimeszterben?',
+          opt:['Hason','Hanyatt','Bal oldalon feküdni — ez a legjobb a vérkeringésnek','Jobb oldalon'],
+          helyes:2,
+          magyarazat:'A bal oldali fekvés optimális a vérkeringés szempontjából — így nem nyom a méh a nagy vérerekre (vena cava). Az aorta jobb oldalon van, ezért a bal oldali fektetés segíti a legjobban a placentáris vérellátást.' },
+      ]
+    },
+    {
+      het: 7, cim: 'Szülésre felkészülés — táplálkozás',
+      kerdesek: [
+        { k:'Milyen tápanyag segíthet a méhnyak érésében a szülés közeledtével?',
+          opt:['Cukor','Datolya — kutatások szerint napi 6-7 szem az utolsó hetekben segíthet a méhnyak érésében','Fehér kenyér','Tej'],
+          helyes:1,
+          magyarazat:'Több kismintás kutatás szerint a napi 6-7 datolya fogyasztása az utolsó 4 hétben összefügg a kedvezőbb méhnyak éréssel és rövidebb aktív szülési szakasszal. Oxitocin-szerű hatása van.' },
+        { k:'Miért fontos a vas és fehérje az utolsó trimeszterben?',
+          opt:['Nem fontos','A szülés közbeni vérveszteségre felkészüléshez — a vas- és fehérjekészlet döntő a regenerációhoz','Csak az anya számára','Csak a baba számára'],
+          helyes:1,
+          magyarazat:'Szüléskor átlagosan 300-500 ml vért veszt az anya. A jó vas- és fehérjestátusz segíti a szülés utáni gyors regenerációt, csökkenti a vérszegénység kockázatát és támogatja a tejtermelés beindulását.' },
+        { k:'Melyik fontos tápanyag szükséges a tejtermelés beindulásához?',
+          opt:['Cukor és üdítő','Fehérje, jód, kolin és folyadék — ezek a tejtermelés alapjai','Csak kalória kell','Felesleges figyelni rá'],
+          helyes:1,
+          magyarazat:'Az anyatej termeléséhez fehérje, jód (pajzsmirigy hormonok a tejtermeléshez), kolin (baba agyfejlődéséhez) és rengeteg folyadék szükséges. Napi 3 liter folyadék az ajánlott szoptatás alatt.' },
+      ]
+    },
+    {
+      het: 8, cim: 'Összefoglalás',
+      kerdesek: [
+        { k:'Mi a három legfontosabb tápanyag a terhesség egészéhez?',
+          opt:['Cukor, koffein, üdítő','Folsav/folát az első trimeszterben, vas a 2-3. trimeszterben, DHA az egész terhesség alatt','Fehér kenyér, tej, margarin','Csak a vitamin tabletta számít'],
+          helyes:1,
+          magyarazat:'A folsav/aktív folát az első 12 hétben a legkritikusabb (idegcsőzáródás), a vas a 2-3. trimeszterben (vérmennyiség növekedés, baba vastartaléka), a DHA az egész terhesség alatt (agy és szem fejlődése).' },
+        { k:'Mikor érdemes elkezdeni szedni a terhességi vitamint?',
+          opt:['Csak a pozitív teszt után','Már a fogamzás előtt 3 hónappal — az idegsőcső az első 28 napban záródik','A 3. trimeszterben','Születés után'],
+          helyes:1,
+          magyarazat:'A terhességi vitamin — különösen a folsav/folát — a fogamzás előtt 3 hónappal elkezdett szedése az ajánlás. Az idegsőcső az első 28 napban záródik, sok esetben még mielőtt tudod hogy terhes vagy.' },
+        { k:'Mi az egyik legfontosabb dolog amit szoptatás alatt tehetsz a babád agyfejlődéséért?',
+          opt:['Sok cukrot enni','DHA gazdag ételek és omega-3 kiegészítő szedése — az anyatej DHA tartalma az anya bevitelétől függ','Keveset inni','Kerülni a halat'],
+          helyes:1,
+          magyarazat:'Az anyatej DHA tartalma közvetlenül az anya omega-3 bevitelétől függ. Minél több DHA gazdag ételt eszel (lazac, szardínia) vagy omega-3 kiegészítőt szedsz, annál több DHA kerül az anyatejbe.' },
       ]
     },
   ],
 
-  gyerekágy: [
+  // ══════════════════════════════════════
+  // 👶 GYEREKÁGY IDŐSZAK — 12 hét × 3 kérdés
+  // ══════════════════════════════════════
+  'gyerekágy': [
     {
-      het: 1,
-      cim: 'Szülés utáni táplálkozás',
+      het: 1, cim: 'Szülés utáni regeneráció és táplálkozás',
       kerdesek: [
-        { k:'Mi a leggyakoribb ok a szülés utáni extrém fáradtságra (a kevés alvás mellett)?',
-          opt:['Túl sok mozgás','Vashiány — szülés közbeni vérveszteség + szoptatás + alváshiány','Túl sok vitamin szedése','Nem elég koffein'],
-          helyes: 1,
-          magyarazat:'A szülés közbeni vérveszteség, a szoptatás és az alváshiány együttesen gyorsan üríti a vastankot. Ha extrém a fáradtság, érdemes vasvizsgálatot kérni.' },
-        { k:'Mennyi vizet kell inni szoptatás alatt?',
-          opt:['1 liter naponta elegendő','1.5-2 liter (szokásos mennyiség)','Legalább 3 liter — az anyatej 87%-a víz','5 liter naponta'],
-          helyes: 2,
-          magyarazat:'Az anyatej 87%-a víz, és naponta 700-1000ml tejet termelsz. Ehhez legalább 3 liter folyadék szükséges naponta. Minden szoptatásnál igyál egy pohár vizet.' },
-        { k:'Melyik tápanyag kritikus az anyatej DHA tartalmához?',
-          opt:['Szénhidrát','Omega-3 zsírsavak (lazac, szardínia, dió)','Koffein','Cukor'],
-          helyes: 1,
-          magyarazat:'Az anyatej DHA tartalma (baba agyfejlődéséhez kritikus) közvetlenül függ az anya omega-3 bevitelétől. Heti 2-3x zsíros hal vagy omega-3 kiegészítő szükséges.' },
+        { k:'Mi az egyik leggyakoribb oka a szülés utáni extrém fáradtságnak az alváshiány mellett?',
+          opt:['Túl sok mozgás','Vashiány — szülés közbeni vérveszteség és szoptatás együtt gyorsan üríti a vastartalékot','Túl sok vitamin','Nem elég koffein'],
+          helyes:1,
+          magyarazat:'A szülés közbeni vérveszteség, a szoptatás és az alváshiány együttesen gyorsan kiüríti a vastartalékot. Ha extrém a fáradtság — kérj ferritin vizsgálatot. 50 felett az ideális, 30 alatt már tünetek jelentkezhetnek.' },
+        { k:'Mennyi folyadékot ajánlott inni szoptatás alatt?',
+          opt:['1 liter naponta','1.5-2 liter (szokásos)','Legalább 2.5-3 liter — az anyatej 87%-a víz','5 liter'],
+          helyes:2,
+          magyarazat:'Az anyatej 87%-a víz, és naponta 700-1000 ml tejet termelsz. Ehhez legalább 2.5-3 liter folyadék szükséges naponta. Trükk: tegyél egy pohár vizet oda ahol szoptatsz — minden szoptatásnál igyál.' },
+        { k:'Melyik fehérjeforrás különösen ajánlott szülés után a regenerációhoz?',
+          opt:['Cukros joghurt','Tojás, lazac, csirke, görög joghurt — mind magas biológiai értékű fehérje','Fehér kenyér','Instant leves'],
+          helyes:1,
+          magyarazat:'A szülés utáni szövetjavításhoz, a tejtermeléshez és a vas pótláshoz magas biológiai értékű fehérjére van szükség. A lazac ráadásul DHA-t is tartalmaz, ami az anyatej minőségét is javítja.' },
       ]
     },
     {
-      het: 2,
-      cim: 'Baby blues és hangulat',
+      het: 2, cim: 'Szoptatás és anyatej',
       kerdesek: [
-        { k:'Mi a különbség a baby blues és a postpartum depresszió között?',
-          opt:['Ugyanaz, csak más névvel','Baby blues: 2 hétig tart, spontán múlik. PPD: 2 hétnél tovább, kezelést igényelhet','Baby blues súlyosabb','Csak a PPD létezik, baby blues nem valódi'],
-          helyes: 1,
-          magyarazat:'Baby blues az anyák 80%-ánál előfordul, szülés után 3-5 nappal tetőzik és kb. 2 hétig tart. Ha 2 hét után sem múlik vagy súlyosbodik — ez PPD, és kezelést igényel.' },
-        { k:'Melyik étrendi hiány ronthatja legjobban a szülés utáni hangulatot?',
-          opt:['Cukorhiány','Omega-3 és D3 vitamin hiány — mindkettő kritikus a szerotonin termeléshez','Koffein hiány','Szénhidrát hiány'],
-          helyes: 1,
-          magyarazat:'Az omega-3 (DHA) és a D3 vitamin közvetlenül befolyásolja a szerotonin és dopamin termelést. Hiányuk depressziót, szorongást és hangulatingadozást okozhat.' },
-        { k:'Mi az Edinburgh Postpartum Depression Scale (EPDS)?',
-          opt:['Egy diétás terv','Egy 10 kérdéses szűrőeszköz a szülés utáni depresszió korai felismerésére','Egy mozgásprogram','Egy vitamin protokoll'],
-          helyes: 1,
-          magyarazat:'Az EPDS a legszélesebb körben használt, validált szűrőeszköz postpartum hangulati zavarok azonosítására. 10 kérdés, az elmúlt 7 napra vonatkozik. 13+ pont esetén kezelés javasolt.' },
+        { k:'Mi befolyásolja leginkább az anyatej minőségét?',
+          opt:['Az anya alvása','Az anya táplálkozása — különösen az omega-3, jód és D-vitamin bevitel','Az időjárás','Az anya hangulata'],
+          helyes:1,
+          magyarazat:'Az anyatej összetétele — különösen a DHA, jód, D-vitamin és B12 tartalma — közvetlenül függ az anya étrendjétől és kiegészítőitől. A legjobb anyatejhez a legjobb anya-táplálkozás szükséges.' },
+        { k:'Mitől lehet kevés anyatej?',
+          opt:['Mindenkinek van elég','Elégtelen mellstimulálás, kiszáradás, stressz és alultápláltság csökkenthetik a tejtermelést','Csak a baby formula a megoldás','Csak genetikai faktor'],
+          helyes:1,
+          magyarazat:'A tejtermelést elsősorban a kereslet szabályozza. Emellett a kiszáradás, krónikus stressz, vashiány és elégtelen kalóriabevitel mind csökkenthetik a tejmennyiséget. Ezek mind táplálkozással és életmóddal befolyásolhatók.' },
+        { k:'Melyik étrend-kiegészítő a legfontosabb szoptatás alatt?',
+          opt:['Cukros vitaminitalok','D-vitamin, omega-3 (DHA), jód — ezek az anyatejbe kerülnek és a babának szükségesek','Fehérjepor','Sportpor'],
+          helyes:1,
+          magyarazat:'A baba D-vitaminja, DHA-ja és jódja szinte kizárólag az anyatejen keresztül érkezik — ezért az anyának szedni kell ezeket. D-vitamint külön is szokás adni a babának, de az anyatej minősége is fontos.' },
+      ]
+    },
+    {
+      het: 3, cim: 'Baby blues és hangulat',
+      kerdesek: [
+        { k:'Mi a különbség a baby blues és a szülés utáni depresszió között?',
+          opt:['Ugyanaz, más névvel','Baby blues: 2-14 napig tart, spontán enyhül. PPD: 2 hétnél tovább tart, kezelést igényel','Csak a PPD valódi','Baby blues súlyosabb'],
+          helyes:1,
+          magyarazat:'A baby blues az anyák 80%-ánál előfordul, szülés után 3-5 nappal tetőzik és 2 héten belül elmúlik. Ha 2 hét után sem javul, vagy rosszabbodik — ez PPD, ami szakmai segítséget igényel. Ne hagyd magad egyedül.' },
+        { k:'Melyik tápanyaghiány ronthatja leginkább a szülés utáni hangulatot?',
+          opt:['Cukorbevitel csökkenése','Omega-3 és D-vitamin hiány — mindkettő kritikus a szerotonin és dopamin termeléshez','Kevesebb kávé','Kevesebb fehér kenyér'],
+          helyes:1,
+          magyarazat:'Az omega-3 (DHA) és a D-vitamin közvetlenül befolyásolja a szerotonin és dopamin termelést. Terhesség alatt az anya DHA raktárai kimerülnek a baba agyának fejlesztésekor — utánpótlásuk segíthet a hangulaton.' },
+        { k:'Mikor kell feltétlenül orvoshoz vagy szakemberhez fordulni?',
+          opt:['Soha, majd elmúlik','Ha 2 hétnél tovább tartanak az intenzív szomorúság, szorongás, alvászavar tünetei, vagy ha nem érzel kapcsolatot a babával','Csak ha nem tudsz enni','Ha egyszer sírsz'],
+          helyes:1,
+          magyarazat:'A postpartum depresszió kezelhető és segítséggel gyógyítható — de segítség nélkül ritkán szűnik meg magától. Ha a tünetek 2 hétnél tovább tartanak, szólj a védőnőnek, orvosnak vagy keress fel szakembert.' },
+      ]
+    },
+    {
+      het: 4, cim: 'Vas és energia visszanyerése',
+      kerdesek: [
+        { k:'Mikor érdemes vasvizsgálatot kérni szülés után?',
+          opt:['Soha','Ha extrém fáradtság van, légszomj, szapora szívverés, vagy ha a szülés vérveszteséggel járt','Csak 1 évvel szülés után','Csak ha a bőr sápadt'],
+          helyes:1,
+          magyarazat:'A ferritin vizsgálat a vastartalék legjobb mutatója. Szülés után — különösen vérveszteség vagy szoptatás esetén — a vashiány nagyon gyakori és kezelendő állapot, amely extrém fáradtságot okoz.' },
+        { k:'Hogyan javul legjobban a vas felszívódása?',
+          opt:['Tejjel együtt','C-vitaminnal együtt (paprika, citrom, kiwi) és hústól elkülönítve a koffeint','Kávéval','Kalciummal együtt'],
+          helyes:1,
+          magyarazat:'A C-vitamin 3-4-szorosára növeli a növényi vas felszívódását. A koffein és a kalcium viszont gátolja — ezért reggeli kávé és vasétel között legalább 1 óra teljen el.' },
+        { k:'Melyik étel tartalmaz legtöbb könnyen felszívódó vasat?',
+          opt:['Fehér kenyér','Máj és vörös hús — a hem-vas a legjobban felszívódó forma','Sárgarépa','Banán'],
+          helyes:1,
+          magyarazat:'A hem-vas (húsokban, különösen a májban) 15-35%-ban szívódik fel, míg a növényi (non-hem) vas csak 2-10%-ban. 100g csirkemáj a napi vasszükséglet sokszorosát tartalmazza.' },
+      ]
+    },
+    {
+      het: 5, cim: 'Bélflóra és immunrendszer',
+      kerdesek: [
+        { k:'Miért különösen fontos a bélflóra szülés után?',
+          opt:['Nem fontos','A szülés, antibiotikumok és stressz mind megzavarják — helyreállítása segít az immunitáson, hangulaton és emésztésen','Csak a babának fontos','Nincs összefüggés'],
+          helyes:1,
+          magyarazat:'A szülés — különösen császármetszés vagy antibiotikum szedés esetén — megzavarhatja az anya bélflóráját. A helyreállítás segít az immunitáson, gyulladáscsökkentésen, és az anyatej probiotikus tartalmán.' },
+        { k:'Melyik fermentált étel a legjobb bélflóra forrás szülés után?',
+          opt:['Cukros joghurt','Görög joghurt (élőflórás), kefir, savanyú káposzta — élő baktériumokat tartalmaznak','Instant pudingok','Gyümölcslé'],
+          helyes:1,
+          magyarazat:'A görög joghurt (élőflórás, szűretlen), kefir, savanyú káposzta és kovászos uborka élő probiotikus baktériumokat tartalmaznak. Az anyatejen keresztül a babának is jutnak a jótékony baktériumok.' },
+        { k:'Mi a probiotikum és mi a prebiotikum különbsége?',
+          opt:['Ugyanaz','Probiotikum = élő baktériumok (kefir, joghurt). Prebiotikum = a baktériumok eledele (rost, hagyma, fokhagyma)','Probiotikum = gyógyszer','Nincs különbség'],
+          helyes:1,
+          magyarazat:'Mindkettőre szükség van! A probiotikumok beviszik a hasznos baktériumokat, a prebiotikumok táplálják és életben tartják őket. A legjobb kombináció: fermentált ételek + sok zöldség és rost.' },
+      ]
+    },
+    {
+      het: 6, cim: 'D-vitamin és magnézium szülés után',
+      kerdesek: [
+        { k:'Miért szükséges D-vitamint szedni szoptatás alatt?',
+          opt:['Nem szükséges','Az anyatej kevés D-vitamint tartalmaz — ezért az anyának pótolni kell, és a babának is szokás külön adni','Csak télen kell','Az anyatejben elég van'],
+          helyes:1,
+          magyarazat:'Az anyatej D-vitamin tartalma alacsony, és az újszülöttek nem kapnak elég napfényt. Ezért a szoptatott babáknak általában D-vitamint adnak, az anyának pedig célszerű szedni, hogy az anyatej minősége jobb legyen.' },
+        { k:'Miben segít a magnézium szülés után?',
+          opt:['Semmiben','Alváshiány okozta kimerültség, izomgörcsök, szorongás és stressz ellen — este szedve segít az elalvásban','Csak izomépítéshez','Csak testsúlycsökkentéshez'],
+          helyes:1,
+          magyarazat:'A magnézium az idegrendszer "fékje". Szülés utáni stresszben, alváshiányban különösen fontos. Magnézium-biszglicinát formában este bevéve segít az elalvásban, csökkenti a szorongást és az izomgörcsöket.' },
+        { k:'Honnan tudod, hogy D-vitamin hiányos vagy?',
+          opt:['Ezt nem lehet tudni','Vérvizsgálattal (25-OH-D3 szint) — az optimális szint 40-60 ng/ml között van','Csak télen fordul elő','Csak bőrszínből derül ki'],
+          helyes:1,
+          magyarazat:'A D-vitamin szint csak vérvizsgálattal mérhető pontosan. Optimal: 40-60 ng/ml. Magyarországon az újszülöttek közel 90%-a és az anyák többsége is hiányos — különösen október-március között.' },
+      ]
+    },
+    {
+      het: 7, cim: 'Pajzsmirigy és hormonális helyreállás',
+      kerdesek: [
+        { k:'Mi az a szülés utáni pajzsmirigygyulladás (postpartum thyroiditis)?',
+          opt:['Nem létező betegség','Szülés utáni autoimmun pajzsmirigy-gyulladás, ami először túlműködést, majd alulműködést okozhat','Csak cukorbetegeknél fordul elő','Teljesen normális állapot kezelés nélkül'],
+          helyes:1,
+          magyarazat:'A postpartum thyroiditis az anyák 5-10%-ánál fordul elő. Először hyperthyreosis tünetei (szívdobogás, fogyás, hőség), majd hypothyreosis (fáradtság, depresszió, hajhullás) alakulhat ki. TSH vizsgálattal szűrhető.' },
+        { k:'Milyen tápanyag segít a pajzsmirigy egészséges működéséhez szülés után?',
+          opt:['Cukor','Jód, szelén és cink — ezek mind szükségesek a pajzsmirigy hormonok termeléséhez és aktiválásához','Margarin','Fehér kenyér'],
+          helyes:1,
+          magyarazat:'A jód a pajzsmirigy hormonok alapanyaga, a szelén aktiválja a T4-et T3-má (az aktív formává), a cink pedig az immunrendszert és a hormonok szintézisét segíti. Mindhárom hiánya fáradtságot okoz.' },
+        { k:'Mikor térnek vissza a menstruáció szülés után?',
+          opt:['Azonnal','Kizárólag szoptatásnál általában 6-12 hónappal szülés után, vegyes vagy tápszereseknél 6-8 héttel','2 évvel szülés után','Mindenkinél ugyanakkor'],
+          helyes:1,
+          magyarazat:'A prolaktin (tejtermelő hormon) gátolja az ovulációt. Kizárólagos szoptatásnál általában 6-12 hónapig nem jön a menstruáció. Ez természetes — de egyéni eltérések nagyok, és szoptatás alatt is lehet teherbe esni!' },
+      ]
+    },
+    {
+      het: 8, cim: 'Mozgás és medencefenék szülés után',
+      kerdesek: [
+        { k:'Mikor lehet visszatérni a sporthoz szülés után?',
+          opt:['Azonnal','Legalább 6-8 héttel természetes szülés után, 10-12 héttel császármetszés után — és csak fokozatosan','1 héttel','Soha nem lehet'],
+          helyes:1,
+          magyarazat:'A medencefenék és a hasizmok gyógyulásához idő kell. Hasi nyomást növelő mozgások (futás, ugrókötelezés, nehéz súlyok) túl korai bevezetése ronthatja a vizeletvesztést és a medencefenék állapotát.' },
+        { k:'Mi a medencefenék edzés legfontosabb célja szülés után?',
+          opt:['Fogyasztás','A szülés alatt meggyengült izmok megerősítése — megelőzve a vizeletvesztést és a prolapsust','Esztétika','Csak császármetszés után kell'],
+          helyes:1,
+          magyarazat:'A medencefenék izmok a szülés során jelentős terhelésnek vannak kitéve. A Kegel-gyakorlatok és medencefenék fizikoterápia segítenek visszanyerni az izomkontrollt, megelőzve a hosszú távú problémákat.' },
+        { k:'Mi a "diastasis recti" és hogyan kerülhető el?',
+          opt:['Nem létező probléma','A hasfal egyenes hasizmainak szétválása terhesség alatt — hasi préseléssel rontható, megfelelő gyakorlatokkal javítható','Csak fájdalommal jár','Mindenkinél előfordul és magától meggyógyul'],
+          helyes:1,
+          magyarazat:'A diastasis recti (hasizom szétválás) terhességben normális, de szülés után egy részénél megmarad. A klasszikus ülőfelhajtás és hasizom-edzés ronthatja. Speciális légzőgyakorlatok és hypopresszív edzés segít.' },
+      ]
+    },
+    {
+      het: 9, cim: 'Energia és önellátás',
+      kerdesek: [
+        { k:'Miért fontos az anya önellátása (étkezés, alvás, pihenés)?',
+          opt:['Önzés','A kimerült anya kevésbé tud jelen lenni a babával — az anya jólléte közvetlenül hat a baba fejlődésére','Csak az anya számára fontos','Nem fontos'],
+          helyes:1,
+          magyarazat:'A "repülős oxigénmaszk" elv: először magadra kell felvenni. A kimerült, alultáplált anya stresszhormon szintje megemelkedik, ami hatással van a tej összetételére és az anya-baba kapcsolatra is.' },
+        { k:'Mi segíthet a legjobban az alváshiány okozta kimerültség kezelésében?',
+          opt:['Sok kávé','Felváltva aludni a partnerrel, rövid nappali szundikálás, és vas+B12 szintjének ellenőrzése','Több cukor evése','Energiaitalok'],
+          helyes:1,
+          magyarazat:'A koffein kompenzálja az ébrenlétérzetet, de nem pótolja a valódi regenerációt. A felváltva alvás, 20-30 perces nap közbeni pihenő (még ha nem alszik is), és a tápanyaghiányok kezelése valódi segítséget nyújthat.' },
+        { k:'Hogyan segíti a mozgás a szülés utáni regenerációt?',
+          opt:['Egyáltalán nem segíti','Javítja a hangulatot (endorfin), segíti a bélmüködést, erősíti a medencefeneket és csökkenti a stresszt','Rontja az anyatejet','Csak fogyáshoz kell'],
+          helyes:1,
+          magyarazat:'Már a napi 20-30 perces séta is bizonyítottan csökkenti a postpartum depresszió kockázatát, javítja az alvásminőséget és az energiaszintet. A friss levegő és napfény a D-vitamin termelésnek is jót tesz.' },
+      ]
+    },
+    {
+      het: 10, cim: 'Immunrendszer és bőr szülés után',
+      kerdesek: [
+        { k:'Miért hullik ki rengeteg haj szülés után?',
+          opt:['Rossz sampon','A hormonszint hirtelen csökkenése után a terhesség alatt "megtartott" hajszálak egyszerre esnek ki — ez telogen effluvium, és természetes','Vashiány okozza kizárólag','Nem normális'],
+          helyes:1,
+          magyarazat:'Terhesség alatt az ösztrogén meghosszabbítja a haj növekedési fázisát — kevesebb esik ki. Szülés után a hormonszint csökken, és az összes "megtartott" haj egyszerre hullik ki. Általában 3-6 hónapig tart, majd visszanő.' },
+        { k:'Mi segíthet a szülés utáni hajhullás csökkentésében?',
+          opt:['Semmi sem segít','Vas, biotin, cink és elegendő fehérje bevitel — ezek a haj növekedéséhez szükségesek','Több stressz','Kevesebbet enni'],
+          helyes:1,
+          magyarazat:'A hajhullás egy részét tápanyaghiány ronthatja. A ferritinszint 50 feletti értéke kifejezetten segíti a hajnövekedést. Biotin, cink és fehérje mind szükséges az egészséges hajhoz.' },
+        { k:'Mire figyeljünk immunrendszer szempontból szülés után?',
+          opt:['Semmire','Az alváshiány, stressz és tápanyaghiányok mind csökkentik az immunitást — rendszeres C-vitamin, D-vitamin és cink segíthet','Csak antibiotikum kell','Oltások nem kellenek'],
+          helyes:1,
+          magyarazat:'Szülés után az immunrendszer egy ideig gyengébb lehet. A megfelelő D-vitamin szint, C-vitamin bevitel (zöldségekből, gyümölcsökből), elegendő alvás és stresszcsökkentés mind segítik az immunvédelmet.' },
+      ]
+    },
+    {
+      het: 11, cim: 'Kapcsolat és érzelmi egészség',
+      kerdesek: [
+        { k:'Mi az oxitocin és mi a szerepe szülés után?',
+          opt:['Stresszhormon','A "szeretethörmon" — szoptatásnál és babával való érintkezésnél termelődik, segíti az anya-baba kötődést és a tejleengedést','Csak szüléskor termelődik','Csak a babának kell'],
+          helyes:1,
+          magyarazat:'Az oxitocin szoptatásnál, ölelésnél, bőr-bőr érintkezésnél szabadul fel. Ez erősíti az anya-baba kötődést, segíti a tejleengedést, csökkenti a stresszt és a szorongást — természetes "boldogsághormon".' },
+        { k:'Mi az, ami NEM normális baby blues esetén és azonnal szakemberhez fordulást igényel?',
+          opt:['Sírni egy párszor','Önkárosító gondolatok, a baba bántásának gondolata, teljes közöny a baba iránt — ezek azonnali segítséget igényelnek','Fáradtság','Néha rosszkedvűnek lenni'],
+          helyes:1,
+          magyarazat:'A felsorolt tünetek a postpartum depresszió vagy postpartum pszichózis jelei lehetnek, amelyek azonnali orvosi segítséget igényelnek. Nem szégyellnivaló — kezelhető állapot, de segítség nélkül nem múlik el.' },
+        { k:'Hogyan támogathatja a partner legjobban az anyát szülés után?',
+          opt:['Nem kell különösebben csinálni semmit','Átveszi a praktikus feladatokat (étel, háztartás, baba), aktívan figyel az anya érzelmi állapotára és biztosítja hogy legyen ideje aludni','Csak anyagi támogatást nyújtani','Nem szólni bele semmibe'],
+          helyes:1,
+          magyarazat:'A partnernek aktív szerepe van a szülés utáni időszakban. Kutatások szerint az apák bevonódása csökkenti a postpartum depresszió kockázatát, és pozitívan hat a baba fejlődésére is.' },
+      ]
+    },
+    {
+      het: 12, cim: 'Program összefoglalás',
+      kerdesek: [
+        { k:'Mi a legfontosabb üzenet a gyerekágy időszakból?',
+          opt:['Minél hamarabb vissza kell nyerni a régi alakot','Az anya jólléte és önellátása teszi lehetővé a legjobb anyaságot — nem önzés, hanem szükségszerűség','A táplálkozás nem számít','Csak a baba számít'],
+          helyes:1,
+          magyarazat:'A gyerekágy nem verseny. A tested hihetetleneset teljesített — regenerálódást igényel. Minél jobban gondoskodsz magadról (alvás, táplálkozás, segítség elfogadása), annál jobban tudsz gondoskodni a babádról.' },
+        { k:'Melyik három tápanyag a legkritikusabb szoptatás alatt?',
+          opt:['Cukor, koffein, fehér kenyér','DHA (omega-3), D-vitamin és jód — ezek az anyatejbe kerülnek és a baba fejlődéséhez szükségesek','Margarin, üdítő, sajt','Csak a kalória számít'],
+          helyes:1,
+          magyarazat:'A DHA a baba agyfejlődéséhez, a D-vitamin a csontokhoz és immunrendszerhez, a jód a pajzsmirigy hormonokhoz és az idegrendszer fejlődéséhez szükséges. Mindhárom hiányos lehet az anyatejben pótlás nélkül.' },
+        { k:'Mit érdemes megőrizni a gyerekágy utáni életben?',
+          opt:['Semmit, vissza a régi élethez','A tudatos táplálkozási szokásokat, a rendszeres magnézium és omega-3 szedést, és az önellátás fontosságának felismerését','Csak a fogyókúrát','Semmire sincs szükség'],
+          helyes:1,
+          magyarazat:'A gyerekágy program alatt megtanult tudás és szokások hosszú távra szólnak. Az omega-3, D-vitamin, magnézium, rendszeres fehérjebevitel és a stresszkezelés nem csak most, hanem egész életeden át segít.' },
       ]
     },
   ],
+
 };
 
 let kvizAllapot = JSON.parse(
@@ -10328,129 +10858,123 @@ document.addEventListener('DOMContentLoaded',()=>{
 const KERDOIVEK = {
 
   // ══════════════════════════════════════
-  // 🌿 ÉLETMÓDVÁLTÁS KÉRDŐÍV (Éva saját kérdőíve)
+  // 🌿 ÉLETMÓDVÁLTÁS KÉRDŐÍV — Éva saját kérdőíve
   // ══════════════════════════════════════
   eletmod: {
     cim: '🌿 Életmódváltás felmérés',
     szin: 'var(--zold)',
     leiras: 'Általános életmód- és táplálkozási állapotfelmérés',
     szekciok: [
-      {
-        cim: '👤 Személyes adatok',
-        kerdesek: [
-          { id:'magassag',      tip:'szam',   cim:'Magasság (cm)', placeholder:'pl. 165' },
-          { id:'suly',          tip:'szam',   cim:'Testsúly (kg)', placeholder:'pl. 68' },
-          { id:'derekben',      tip:'szam',   cim:'Derékbőség cm (ha ismert)', placeholder:'pl. 82' },
-          { id:'foglalkozas',   tip:'szoveg', cim:'Foglalkozás', placeholder:'pl. irodai munka' },
-          { id:'munka_tipusa',  tip:'multi',  cim:'Milyen jellegű munkát végzel?', valaszok:['Ülőmunka','Állómunka','Fizikai munka','Váltott műszak','Éjszakai műszak'] },
-        ]
-      },
-      {
-        cim: '🎯 Célok és motiváció',
-        kerdesek: [
-          { id:'miert',         tip:'szoveg', cim:'Miért jelentkeztél a programba?', placeholder:'Meséld el...' },
-          { id:'fo_problema',   tip:'szoveg', cim:'Mi a fő probléma, amin változtatni szeretnél?', placeholder:'...' },
-          { id:'mióta',         tip:'szoveg', cim:'Mióta áll fenn ez a probléma?', placeholder:'pl. 3 éve' },
-          { id:'egeszseg_ert',  tip:'slider', cim:'Hogyan értékeled jelenlegi egészségi állapotodat?', min:1, max:10, alapertek:5 },
-          { id:'motivacio',     tip:'slider', cim:'Mennyire érzed magad motiváltnak a változtatásra?', min:1, max:10, alapertek:7 },
-          { id:'cel_3dolog',    tip:'szoveg', cim:'Mi az a 3 dolog, amin legszívesebben változtatnál?', placeholder:'1. ... 2. ... 3. ...' },
-          { id:'cel_6ho',       tip:'szoveg', cim:'Mit szeretnél elérni a következő 3-6 hónapban?', placeholder:'...' },
-        ]
-      },
-      {
-        cim: '⚖️ Testsúly és testösszetétel',
-        kerdesek: [
-          { id:'suly_legkisebb',tip:'szam',   cim:'Legkisebb felnőttkori testsúlyod (kg)', placeholder:'pl. 60' },
-          { id:'suly_legnagyobb',tip:'szam',  cim:'Legnagyobb felnőttkori testsúlyod (kg)', placeholder:'pl. 75' },
-          { id:'suly_valtozas', tip:'single', cim:'Az elmúlt 5 évben:', valaszok:['Jelentősen híztam','Jelentősen fogytam','Stabil maradt a súlyom'] },
-          { id:'fogyas_neh',    tip:'slider', cim:'Mennyire könnyű számodra a fogyás?', min:1, max:10, alapertek:5 },
-          { id:'suly_hol',      tip:'single', cim:'Hol rakódik rád leginkább a plusz súly?', valaszok:['Has','Csípő','Comb','Egyenletesen'] },
-        ]
-      },
-      {
-        cim: '🏥 Korábbi betegségek',
-        kerdesek: [
-          { id:'betegsegek',    tip:'multi',  cim:'Diagnosztizáltak nálad valaha:', valaszok:['Magas vérnyomás','Cukorbetegség','Inzulinrezisztencia','Pajzsmirigy betegség','Autoimmun betegség','IBS','Crohn-betegség','Colitis ulcerosa','Reflux','Migréen','Allergia','Asztma','Ekcéma','Pikkelysömör','Zsírmáj','Magas koleszterin','Egyik sem'] },
-          { id:'gyogyszer',     tip:'szoveg', cim:'Szedsz rendszeresen gyógyszert? Ha igen, mit?', placeholder:'pl. nem szedek' },
-          { id:'kiegeszito',    tip:'szoveg', cim:'Szedsz étrend-kiegészítőket? Ha igen, mit?', placeholder:'pl. D-vitamin, Omega-3' },
-        ]
-      },
-      {
-        cim: '⚡ Hormonális tünetek',
-        kerdesek: [
-          { id:'hormon_tunet',  tip:'multi',  cim:'Tapasztalod az alábbiakat?', valaszok:['Hajhullás','Fáradékonyság','Energiahiány','Hideg kezek-lábak','Alvászavar','Szorongás','Hangulatingadozás','Csökkent terhelhetőség','Memóriazavar','Koncentrációs nehézség','Fokozott izzadás','Egyik sem'] },
-          { id:'pajzs_vizsg',   tip:'single', cim:'Volt pajzsmirigy vizsgálatod?', valaszok:['Igen - eltérés volt','Igen - rendben volt','Nem volt'] },
-        ]
-      },
-      {
-        cim: '🍬 Vércukor és anyagcsere',
-        kerdesek: [
-          { id:'vcukor_tort',   tip:'multi',  cim:'Volt valaha:', valaszok:['Emelkedett vércukor','Emelkedett inzulin','Inzulinrezisztencia','Terheléses cukorvizsgálat','Egyik sem'] },
-          { id:'vcukor_tunet',  tip:'multi',  cim:'Tapasztalod:', valaszok:['Erős édességkívánás','Gyakori éhség','Remegés étkezések között','Délutáni energiazuhanás','Étkezés utáni álmosság','Nehéz fogyás','Egyik sem'] },
-        ]
-      },
-      {
-        cim: '🍽️ Táplálkozási szokások',
-        kerdesek: [
-          { id:'etkezes_db',    tip:'szam',   cim:'Naponta hányszor eszel?', placeholder:'pl. 3' },
-          { id:'etkezes_rend',  tip:'slider', cim:'Mennyire rendszeres az étkezésed?', min:1, max:10, alapertek:5 },
-          { id:'reggeli',       tip:'single', cim:'Reggelizel?', valaszok:['Mindig','Gyakran','Ritkán','Soha'] },
-          { id:'zoldseg',       tip:'single', cim:'Átlagosan mennyi zöldséget fogyasztasz?', valaszok:['Minden nap többször','Naponta','Hetente néhányszor','Ritkán'] },
-          { id:'gyumolcs',      tip:'single', cim:'Átlagosan mennyi gyümölcsöt fogyasztasz?', valaszok:['Naponta többször','Naponta','Hetente néhányszor','Ritkán'] },
-          { id:'feldolgozott',  tip:'single', cim:'Feldolgozott élelmiszereket fogyasztasz?', valaszok:['Gyakran','Néha','Ritkán'] },
-          { id:'cukor',         tip:'single', cim:'Cukros ételeket fogyasztasz?', valaszok:['Naponta','Hetente többször','Ritkán'] },
-          { id:'alkohol',       tip:'single', cim:'Alkoholt fogyasztasz?', valaszok:['Rendszeresen','Alkalmanként','Nem'] },
-          { id:'feherje_forras',tip:'multi',  cim:'Milyen fehérjeforrásokat fogyasztasz?', valaszok:['Tojás','Hal','Csirke','Vörös hús','Tejtermékek','Hüvelyesek','Olajos magvak'] },
-          { id:'feherje_mikor', tip:'multi',  cim:'Melyik étkezésed tartalmaz rendszeresen fehérjét?', valaszok:['Reggeli','Ebéd','Vacsora','Mindegyik'] },
-          { id:'omega3_vizsga', tip:'single', cim:'Volt Omega-3 Index vizsgálatod?', valaszok:['Igen','Nem'] },
-          { id:'omega3_hal',    tip:'single', cim:'Milyen gyakran fogyasztasz tengeri halat?', valaszok:['Heti 2-3 alkalom','Heti 1 alkalom','Havonta','Ritkán'] },
-          { id:'vizbevetel',    tip:'szam',   cim:'Napi folyadékbevitel (liter)', placeholder:'pl. 1.5' },
-        ]
-      },
-      {
-        cim: '🦠 Emésztőrendszer és bélflóra',
-        kerdesek: [
-          { id:'emesztes',      tip:'multi',  cim:'Tapasztalsz:', valaszok:['Puffadást','Székrekedést','Hasmenést','Refluxot','Hasi fájdalmat','Teltségérzést','Ételintoleranciát','Egyiket sem'] },
-          { id:'szeklet_napi',  tip:'single', cim:'Naponta van székleted?', valaszok:['Igen','Nem'] },
-          { id:'antibiotikum',  tip:'single', cim:'Volt antibiotikum kezelésed az elmúlt 3 évben?', valaszok:['Igen - 1-2x','Igen - 3+ alkalommal','Nem'] },
-        ]
-      },
-      {
-        cim: '🏃 Mozgás és alvás',
-        kerdesek: [
-          { id:'mozgas_het',    tip:'single', cim:'Hetente hányszor mozogsz?', valaszok:['Nem mozgok','1-2 alkalom','3-4 alkalom','5 vagy több alkalom'] },
-          { id:'mozgas_forma',  tip:'szoveg', cim:'Milyen mozgásformát végzel?', placeholder:'pl. séta, jóga' },
-          { id:'alvas_ora',     tip:'szam',   cim:'Átlagosan hány órát alszol?', placeholder:'pl. 7' },
-          { id:'alvas_minoseg', tip:'single', cim:'Mennyi idő alatt alszol el?', valaszok:['15 percen belül','15-30 perc','Több mint 30 perc'] },
-          { id:'alvas_kipih',   tip:'single', cim:'Kipihenten ébredsz reggel?', valaszok:['Igen','Nem'] },
-          { id:'alvas_ebredes', tip:'single', cim:'Ébredsz éjszaka?', valaszok:['Gyakran','Néha','Ritkán'] },
-        ]
-      },
-      {
-        cim: '😰 Stressz és életmód',
-        kerdesek: [
-          { id:'stressz_szint', tip:'slider', cim:'Mennyire érzed stresszesnek az életedet?', min:1, max:10, alapertek:5 },
-          { id:'tulterhelt',    tip:'slider', cim:'Mennyire érzed túlterheltnek magad?', min:1, max:10, alapertek:5 },
-          { id:'stressz_ok',    tip:'multi',  cim:'Mi okozza a legtöbb stresszt?', valaszok:['Munka','Család','Anyagi helyzet','Egészség','Párkapcsolat','Egyéb'] },
-          { id:'feltoltodes',   tip:'single', cim:'Van rendszeres feltöltődési lehetőséged?', valaszok:['Igen','Nem'] },
-        ]
-      },
-      {
-        cim: '🔬 Egyéb tényezők',
-        kerdesek: [
-          { id:'gyulladas',     tip:'multi',  cim:'Tapasztalsz:', valaszok:['Gyakori fejfájást','Ízületi panaszokat','Bőrproblémákat','Allergiát','Visszatérő fertőzéseket','Krónikus fáradtságot','Egyiket sem'] },
-          { id:'covid',         tip:'single', cim:'Átestél COVID-fertőzésen?', valaszok:['Igen - egyszer','Igen - többször','Nem','Nem tudom'] },
-          { id:'covid_valtozas',tip:'szoveg', cim:'Tapasztaltál azóta tartós változást az egészségedben? Ha igen, mit?', placeholder:'...' },
-          { id:'korny_vegyi',   tip:'single', cim:'Dolgozol rendszeresen vegyszerekkel?', valaszok:['Igen','Nem'] },
-          { id:'csaladbetegseg',tip:'multi',  cim:'Közvetlen családban előfordult:', valaszok:['Cukorbetegség','Pajzsmirigybetegség','Autoimmun betegség','Magas vérnyomás','Szív- és érrendszeri betegség','Daganatos betegség','Alzheimer-kór','Egyik sem'] },
-          { id:'megjegyzes',    tip:'szoveg', cim:'Van bármi, amit fontosnak tartasz elmondani, de nem kerülts szóba?', placeholder:'...' },
-        ]
-      },
+      { cim: '👤 Személyes adatok', kerdesek: [
+        { id:'magassag',     tip:'szam',   cim:'Magasság (cm)', placeholder:'pl. 165' },
+        { id:'suly',         tip:'szam',   cim:'Testsúly (kg)', placeholder:'pl. 68' },
+        { id:'derekboseg',   tip:'szam',   cim:'Derékbőség cm (ha ismert)', placeholder:'pl. 82' },
+        { id:'foglalkozas',  tip:'szoveg', cim:'Foglalkozás', placeholder:'pl. irodai munka' },
+        { id:'munka_tipusa', tip:'multi',  cim:'Milyen jellegű munkát végzel?', valaszok:['Ülőmunka','Állómunka','Fizikai munka','Váltott műszak','Éjszakai műszak'] },
+      ]},
+      { cim: '💚 Általános egészségi állapot', kerdesek: [
+        { id:'egeszseg_ert',  tip:'slider', cim:'Hogyan értékeled jelenlegi egészségi állapotodat?', min:1, max:10, alapertek:5 },
+        { id:'miert_program', tip:'szoveg', cim:'Miért jelentkeztél a programba?', placeholder:'...' },
+        { id:'fo_problema',   tip:'szoveg', cim:'Mi a fő probléma, amin változtatni szeretnél?', placeholder:'...' },
+        { id:'mióta',         tip:'szoveg', cim:'Mióta áll fenn ez a probléma?', placeholder:'pl. 3 éve' },
+        { id:'egeszseg_valtozas', tip:'single', cim:'Volt az elmúlt évben jelentős egészségügyi változás?', valaszok:['Igen','Nem'] },
+        { id:'egeszseg_valtozas_reszlet', tip:'szoveg', cim:'Ha igen, mi történt?', placeholder:'...' },
+      ]},
+      { cim: '⚖️ Testsúly és testösszetétel', kerdesek: [
+        { id:'suly_legkisebb',   tip:'szam',   cim:'Legkisebb felnőttkori testsúlyod (kg)', placeholder:'pl. 60' },
+        { id:'suly_legnagyobb',  tip:'szam',   cim:'Legnagyobb felnőttkori testsúlyod (kg)', placeholder:'pl. 80' },
+        { id:'suly_valtozas',    tip:'single', cim:'Az elmúlt 5 évben:', valaszok:['Jelentősen híztam','Jelentősen fogytam','Stabil maradt a súlyom'] },
+        { id:'fogyas_konnyu',    tip:'slider', cim:'Mennyire könnyű számodra a fogyás? (1=nagyon nehéz)', min:1, max:10, alapertek:5 },
+        { id:'suly_hol',         tip:'single', cim:'Hol rakódik rád leginkább a plusz súly?', valaszok:['Has','Csípő','Comb','Egyenletesen'] },
+      ]},
+      { cim: '🏥 Korábbi betegségek és gyógyszerek', kerdesek: [
+        { id:'betegsegek',   tip:'multi',  cim:'Diagnosztizáltak nálad valaha:', valaszok:['Magas vérnyomás','Cukorbetegség','Inzulinrezisztencia','Pajzsmirigy betegség','Autoimmun betegség','IBS','Crohn-betegség','Colitis ulcerosa','Reflux','Migréen','Allergia','Asztma','Ekcéma','Pikkelysömör','Zsírmáj','Magas koleszterin','Egyik sem'] },
+        { id:'betegseg_egyeb', tip:'szoveg', cim:'Egyéb betegség:', placeholder:'...' },
+        { id:'gyogyszer',    tip:'szoveg', cim:'Szedsz rendszeresen gyógyszert? Ha igen, mit?', placeholder:'pl. nem' },
+        { id:'kiegeszito',   tip:'szoveg', cim:'Szedsz étrend-kiegészítőket? Ha igen, mit?', placeholder:'pl. D-vitamin' },
+      ]},
+      { cim: '⚡ Hormonális tünetek', kerdesek: [
+        { id:'hormon_tunet', tip:'multi',  cim:'Tapasztalod az alábbiakat?', valaszok:['Hajhullás','Fáradékonyság','Energiahiány','Hideg kezek-lábak','Alvászavar','Szorongás','Hangulatingadozás','Csökkent terhelhetőség','Memóriazavar','Koncentrációs nehézség','Fokozott izzadás','Egyik sem'] },
+        { id:'pajzs_vizsg',  tip:'single', cim:'Volt pajzsmirigy vizsgálatod?', valaszok:['Igen','Nem'] },
+        { id:'pajzs_ultrahang', tip:'single', cim:'Volt pajzsmirigy ultrahangod?', valaszok:['Igen','Nem'] },
+        { id:'pajzs_elteresek', tip:'szoveg', cim:'Ismert eltérés? Ha igen, mi?', placeholder:'...' },
+      ]},
+      { cim: '🍬 Vércukor és anyagcsere', kerdesek: [
+        { id:'vcukor_tort',  tip:'multi',  cim:'Volt valaha:', valaszok:['Emelkedett vércukor','Emelkedett inzulin','Inzulinrezisztencia','Terheléses cukorvizsgálat','Egyik sem'] },
+        { id:'vcukor_tunet', tip:'multi',  cim:'Tapasztalod:', valaszok:['Erős édességkívánás','Gyakori éhség','Remegés étkezések között','Délutáni energiazuhanás','Étkezés utáni álmosság','Nehéz fogyás','Egyik sem'] },
+      ]},
+      { cim: '🍽️ Táplálkozási szokások', kerdesek: [
+        { id:'etkezes_db',   tip:'szam',   cim:'Naponta hányszor eszel?', placeholder:'pl. 3' },
+        { id:'etkezes_rend', tip:'slider', cim:'Mennyire rendszeres az étkezésed?', min:1, max:10, alapertek:5 },
+        { id:'reggeli',      tip:'single', cim:'Reggelizel?', valaszok:['Mindig','Gyakran','Ritkán','Soha'] },
+        { id:'zoldseg',      tip:'single', cim:'Átlagosan mennyi zöldséget fogyasztasz?', valaszok:['Minden nap többször','Naponta','Hetente néhányszor','Ritkán'] },
+        { id:'gyumolcs',     tip:'single', cim:'Átlagosan mennyi gyümölcsöt fogyasztasz?', valaszok:['Naponta többször','Naponta','Hetente néhányszor','Ritkán'] },
+        { id:'feldolg',      tip:'single', cim:'Feldolgozott élelmiszereket fogyasztasz?', valaszok:['Gyakran','Néha','Ritkán'] },
+        { id:'cukor',        tip:'single', cim:'Cukros ételeket fogyasztasz?', valaszok:['Naponta','Hetente többször','Ritkán'] },
+        { id:'peksut',       tip:'single', cim:'Péksüteményeket fogyasztasz?', valaszok:['Naponta','Hetente többször','Ritkán'] },
+        { id:'udito',        tip:'single', cim:'Üdítőitalokat fogyasztasz?', valaszok:['Naponta','Hetente','Ritkán'] },
+        { id:'alkohol',      tip:'single', cim:'Alkoholt fogyasztasz?', valaszok:['Rendszeresen','Alkalmanként','Nem'] },
+      ]},
+      { cim: '🥩 Fehérje és Omega-3', kerdesek: [
+        { id:'feherje_forras', tip:'multi', cim:'Milyen fehérjeforrásokat fogyasztasz rendszeresen?', valaszok:['Tojást','Halat','Csirkét','Vörös húst','Tejtermékeket','Hüvelyeseket','Olajos magvakat'] },
+        { id:'feherje_mikor', tip:'multi',  cim:'Melyik étkezésed tartalmaz rendszeresen fehérjét?', valaszok:['Reggeli','Ebéd','Vacsora','Mindegyik'] },
+        { id:'omega3_vizsg',  tip:'single', cim:'Volt Omega-3 Index vizsgálatod?', valaszok:['Igen','Nem'] },
+        { id:'omega3_szed',   tip:'single', cim:'Szedsz omega-3 készítményt?', valaszok:['Igen','Nem'] },
+        { id:'omega3_mióta',  tip:'szoveg', cim:'Ha igen, mióta?', placeholder:'pl. 3 hónapja' },
+        { id:'hal_gyak',      tip:'single', cim:'Milyen gyakran fogyasztasz tengeri halat?', valaszok:['Heti 2-3 alkalom','Heti 1 alkalom','Havonta','Ritkán'] },
+      ]},
+      { cim: '🦠 Emésztőrendszer és bélflóra', kerdesek: [
+        { id:'emesztes',     tip:'multi',  cim:'Tapasztalsz:', valaszok:['Puffadást','Székrekedést','Hasmenést','Refluxot','Hasi fájdalmat','Teltségérzést','Ételintoleranciát','Egyiket sem'] },
+        { id:'szeklet_napi', tip:'single', cim:'Naponta van székleted?', valaszok:['Igen','Nem'] },
+        { id:'szeklet_telj', tip:'single', cim:'Úgy érzed, teljes a kiürülés?', valaszok:['Igen','Nem'] },
+        { id:'probiotikum',  tip:'single', cim:'Szedsz probiotikumot?', valaszok:['Igen','Nem'] },
+        { id:'prebiotikum',  tip:'single', cim:'Szedsz prebiotikumot?', valaszok:['Igen','Nem'] },
+        { id:'prebiot_rost', tip:'single', cim:'Fogyasztasz rendszeresen prebiotikus rostokat?', valaszok:['Igen','Nem','Nem tudom'] },
+        { id:'antibiotikum', tip:'single', cim:'Volt antibiotikum kezelésed az elmúlt 3 évben?', valaszok:['Igen','Nem'] },
+        { id:'antibiot_db',  tip:'szoveg', cim:'Ha igen, körülbelül hányszor?', placeholder:'pl. 2-szer' },
+      ]},
+      { cim: '🏃 Mozgás', kerdesek: [
+        { id:'mozgas_het',   tip:'single', cim:'Hetente hányszor mozogsz?', valaszok:['Nem mozgok','1-2 alkalom','3-4 alkalom','5 vagy több alkalom'] },
+        { id:'mozgas_forma', tip:'szoveg', cim:'Milyen mozgásformát végzel?', placeholder:'pl. séta, jóga' },
+        { id:'lepesszam',    tip:'szoveg', cim:'Napi átlagos lépésszámod (ha tudod)', placeholder:'pl. 5000' },
+      ]},
+      { cim: '😴 Alvás és regeneráció', kerdesek: [
+        { id:'alvas_ora',    tip:'szam',   cim:'Átlagosan hány órát alszol?', placeholder:'pl. 7' },
+        { id:'alvas_elalv',  tip:'single', cim:'Mennyi idő alatt alszol el?', valaszok:['15 percen belül','15-30 perc','Több mint 30 perc'] },
+        { id:'alvas_ebredes',tip:'single', cim:'Ébredsz éjszaka?', valaszok:['Gyakran','Néha','Ritkán'] },
+        { id:'alvas_kipih',  tip:'single', cim:'Kipihenten ébredsz reggel?', valaszok:['Igen','Nem'] },
+      ]},
+      { cim: '😰 Stressz', kerdesek: [
+        { id:'stressz_szint',tip:'slider', cim:'Mennyire érzed stresszesnek az életedet?', min:1, max:10, alapertek:5 },
+        { id:'tulterhelt',   tip:'slider', cim:'Mennyire érzed túlterheltnek magad?', min:1, max:10, alapertek:5 },
+        { id:'stressz_ok',   tip:'multi',  cim:'Mi okozza a legtöbb stresszt?', valaszok:['Munka','Család','Anyagi helyzet','Egészség','Párkapcsolat','Egyéb'] },
+        { id:'feltoltodes',  tip:'single', cim:'Van rendszeres feltöltődési lehetőséged?', valaszok:['Igen','Nem'] },
+        { id:'feltolt_mod',  tip:'szoveg', cim:'Ha igen, milyen formában?', placeholder:'pl. séta, olvasás' },
+      ]},
+      { cim: '🔬 Gyulladás, COVID, környezet', kerdesek: [
+        { id:'gyulladas',    tip:'multi',  cim:'Tapasztalsz:', valaszok:['Gyakori fejfájást','Ízületi panaszokat','Bőrproblémákat','Allergiát','Visszatérő fertőzéseket','Krónikus fáradtságot','Egyiket sem'] },
+        { id:'covid',        tip:'single', cim:'Átestél COVID-fertőzésen?', valaszok:['Igen - egyszer','Igen - többször','Nem','Nem tudom'] },
+        { id:'covid_oltas',  tip:'single', cim:'Kaptál COVID elleni oltást?', valaszok:['Igen','Nem'] },
+        { id:'covid_oltas_db',tip:'szoveg',cim:'Ha igen, hány alkalommal?', placeholder:'pl. 3' },
+        { id:'covid_valtozas',tip:'szoveg',cim:'Tapasztaltál azóta tartós változást? Ha igen, mit?', placeholder:'...' },
+        { id:'vegyi',        tip:'single', cim:'Dolgozol rendszeresen vegyszerekkel?', valaszok:['Igen','Nem'] },
+        { id:'korny_anyag',  tip:'multi',  cim:'Használsz rendszeresen:', valaszok:['Műanyag ételtárolót','Műanyag kulacsot','Illatosítókat','Erős tisztítószereket','Egyiket sem'] },
+      ]},
+      { cim: '👨‍👩‍👧 Családi előzmények', kerdesek: [
+        { id:'csalad_betegseg', tip:'multi', cim:'A közvetlen családban előfordult:', valaszok:['Cukorbetegség','Pajzsmirigybetegség','Autoimmun betegség','Magas vérnyomás','Szív- és érrendszeri betegség','Daganatos betegség','Alzheimer-kór','Egyik sem'] },
+      ]},
+      { cim: '🎯 Motiváció és célok', kerdesek: [
+        { id:'motivacio',    tip:'slider', cim:'Mennyire érzed magad motiváltnak a változtatásra?', min:1, max:10, alapertek:7 },
+        { id:'cel_3dolog',   tip:'szoveg', cim:'Mi az a 3 dolog, amin a legszívesebben változtatnál?', placeholder:'1. ...\n2. ...\n3. ...' },
+        { id:'cel_6ho',      tip:'szoveg', cim:'Mit szeretnél elérni a következő 3-6 hónapban?', placeholder:'...' },
+        { id:'segitseg',     tip:'szoveg', cim:'Mi az, amiben a leginkább segítséget vársz tőlem?', placeholder:'...' },
+        { id:'megjegyzes',   tip:'szoveg', cim:'Van bármi, amit fontosnak tartasz elmondani, de nem kerülts szóba?', placeholder:'...' },
+      ]},
     ]
   },
 
   // ══════════════════════════════════════
-  // 🌸 VÁRANDÓSSÁG ELŐTTI KÉRDŐÍV (Babaváró állapotfelmérés)
+  // 🌸 VÁRANDÓSSÁG ELŐTTI KÉRDŐÍV
   // ══════════════════════════════════════
   elotte: {
     cim: '🌸 Babaváró állapotfelmérés',
@@ -10684,75 +11208,93 @@ const KERDOIVEK = {
   },
 
   // ══════════════════════════════════════
-  // 👶 GYEREKÁGY IDŐSZAK KÉRDŐÍV
+  // 👶 GYERMEKÁGYAS KÉRDŐÍV — Éva saját kérdőíve
   // ══════════════════════════════════════
-  gyerekágy: {
-    cim: '👶 Gyerekágy időszak felmérés',
+  'gyerekágy': {
+    cim: '👶 Gyermekágyas állapotfelmérő',
     szin: 'var(--narancs)',
-    leiras: 'Szülés utáni táplálkozás, közérzet és életmód felmérése',
+    leiras: 'Szülés utáni regeneráció, szoptatás, táplálkozás és közérzet felmérése',
     szekciok: [
-      {
-        cim: '👤 Alapadatok',
-        kerdesek: [
-          { id:'szules_mikor',  tip:'single', cim:'Mikor volt a szülés?', valaszok:['Kevesebb mint 6 hete','6-12 hete','3-6 hónapja','Több mint 6 hónapja'] },
-          { id:'szules_mod',    tip:'single', cim:'Hogyan szültél?', valaszok:['Természetes úton','Császármetszéssel','Sürgősségi császárral'] },
-          { id:'szoptat',       tip:'single', cim:'Szoptatsz?', valaszok:['Igen - kizárólag szoptatás','Igen - vegyes táplálás','Nem - tápszer'] },
-          { id:'magassag',      tip:'szam',   cim:'Magasság (cm)', placeholder:'pl. 165' },
-          { id:'suly_most',     tip:'szam',   cim:'Jelenlegi testsúly (kg)', placeholder:'pl. 70' },
-        ]
-      },
-      {
-        cim: '💙 Közérzet és hangulat',
-        kerdesek: [
-          { id:'altalanos_kozerz',tip:'slider',cim:'Általános közérzeted (1-10)?', min:1, max:10, alapertek:5 },
-          { id:'hangulat',      tip:'single', cim:'Hogyan jellemeznéd az általános hangulatodat?', valaszok:['Jó, boldognak érzem magam','Változékony','Nehéz időszak, sokszor sírok','Depressziósnak érzem magam'] },
-          { id:'alvas_ora',     tip:'szam',   cim:'Átlagosan hány órát alszol összesen?', placeholder:'pl. 5' },
-          { id:'energia',       tip:'slider', cim:'Energiaszinted (1-10)?', min:1, max:10, alapertek:5 },
-          { id:'panaszok',      tip:'multi',  cim:'Tapasztalsz:', valaszok:['Extrém fáradtság','Hajhullás','Ízületi fájdalom','Sebes mellbimbó','Mastitis (mellgyulladás)','Székrekedés','Aranyér','Hüvelyi szárazság','Vizeletvesztés','Sebfájdalom','Baby blues','Szorongás','Egyik sem'] },
-        ]
-      },
-      {
-        cim: '🍽️ Táplálkozás szoptatás alatt',
-        kerdesek: [
-          { id:'etkezes_db',    tip:'szam',   cim:'Naponta hányszor eszel?', placeholder:'pl. 4' },
-          { id:'vizbevetel',    tip:'szam',   cim:'Napi folyadékbevitel (liter)', placeholder:'pl. 2.5' },
-          { id:'reggeli',       tip:'single', cim:'Reggelizel?', valaszok:['Mindig','Általában','Ritkán','Sosem'] },
-          { id:'feherje_forras',tip:'multi',  cim:'Fehérjeforrások:', valaszok:['Tojás','Hal','Csirke','Vörös hús','Tejtermékek','Hüvelyesek','Olajos magvak'] },
-          { id:'zoldseg',       tip:'single', cim:'Zöldségfogyasztás:', valaszok:['Sokat','Közepes mennyiséget','Keveset'] },
-          { id:'kiegeszito',    tip:'szoveg', cim:'Milyen étrend-kiegészítőket szedsz?', placeholder:'pl. D-vitamin, omega-3' },
-          { id:'vitaminok',     tip:'multi',  cim:'Szeded az alábbiakat?', valaszok:['D-vitamin','Omega-3 / DHA','Vas','Jód','Magnézium','Probiotikum','B12','Egyik sem'] },
-        ]
-      },
-      {
-        cim: '🦠 Emésztőrendszer',
-        kerdesek: [
-          { id:'szeklet_gyak',  tip:'single', cim:'Milyen gyakran van székleted?', valaszok:['Naponta','2-3 naponta','Ritkábban'] },
-          { id:'emesztes',      tip:'multi',  cim:'Tapasztalsz:', valaszok:['Puffadást','Székrekedést','Refluxot','Hasmenést','Egyiket sem'] },
-        ]
-      },
-      {
-        cim: '🏃 Mozgás',
-        kerdesek: [
-          { id:'mozgas_het',    tip:'single', cim:'Hetente hányszor mozogsz?', valaszok:['Nem mozgok','1-2 alkalom','3-4 alkalom','5+ alkalom'] },
-          { id:'mozgas_forma',  tip:'szoveg', cim:'Milyen mozgásformát végzel?', placeholder:'pl. séta a babával' },
-        ]
-      },
-      {
-        cim: '👨‍👩‍👧 Támogatás és környezet',
-        kerdesek: [
-          { id:'tamogato',      tip:'multi',  cim:'Ki tud rád számottevően segíteni?', valaszok:['Partner','Nagyszülők','Testvér','Barátok','Senki'] },
-          { id:'partner_resz',  tip:'slider', cim:'A partnered mennyire vesz részt a gondozásban?', min:1, max:10, alapertek:5 },
-        ]
-      },
-      {
-        cim: '💭 Célok és motiváció',
-        kerdesek: [
-          { id:'fo_cel',        tip:'multi',  cim:'Mi a fő célod most?', valaszok:['Visszanyerni a formám','Több energiát','Szoptatáshoz optimálisan táplálkozni','Egészségesebben enni','Stresszkezelés','Hangulat javítása'] },
-          { id:'segitseg',      tip:'szoveg', cim:'Miben szeretnél leginkább segítséget?', placeholder:'...' },
-          { id:'nehezseg',      tip:'szoveg', cim:'Mi a legnagyobb nehézség most?', placeholder:'...' },
-          { id:'megjegyzes',    tip:'szoveg', cim:'Van bármi egyéb, amit fontosnak tartasz?', placeholder:'...' },
-        ]
-      },
+      { cim: '👶 Alapadatok', kerdesek: [
+        { id:'baba_kor',     tip:'single', cim:'A baba jelenlegi életkora:', valaszok:['0-2 hét','2-6 hét','6-12 hét','3-6 hónap','6-12 hónap'] },
+        { id:'magassag',     tip:'szam',   cim:'Magasság (cm)', placeholder:'pl. 165' },
+        { id:'suly_most',    tip:'szam',   cim:'Jelenlegi testsúly (kg)', placeholder:'pl. 70' },
+      ]},
+      { cim: '🏥 A szülés rövid története', kerdesek: [
+        { id:'szules_mod',   tip:'single', cim:'Milyen módon született a baba?', valaszok:['Spontán hüvelyi szülés','Vákuumos szülés','Fogós szülés','Tervezett császármetszés','Sürgősségi császármetszés'] },
+        { id:'komplikacio',  tip:'single', cim:'Volt bármilyen komplikáció?', valaszok:['Igen','Nem'] },
+        { id:'komplik_reszl',tip:'szoveg', cim:'Ha igen, mi történt?', placeholder:'...' },
+        { id:'szules_esemenyek', tip:'multi', cim:'Volt:', valaszok:['Gátmetszés','Gátsérülés','Nagyobb vérveszteség','Lepényi probléma','Fertőzés','Egyéb','Egyik sem'] },
+      ]},
+      { cim: '💪 Regeneráció', kerdesek: [
+        { id:'fizikai_erz',  tip:'slider', cim:'Hogy érzed magad fizikailag jelenleg?', min:1, max:10, alapertek:5 },
+        { id:'regener_utem', tip:'single', cim:'Úgy érzed, hogy megfelelő ütemben regenerálódsz?', valaszok:['Igen','Nem','Nem tudom'] },
+        { id:'fizikai_tunet',tip:'multi',  cim:'Jelenleg is tapasztalsz:', valaszok:['Erős fáradtságot','Szédülést','Gyengeséget','Légszomjat','Szívdobogásérzést','Fejfájást','Egyiket sem'] },
+      ]},
+      { cim: '🩺 Vérzés és nőgyógyászati tünetek', kerdesek: [
+        { id:'verzes_medd',  tip:'szoveg', cim:'Meddig tartott a gyermekágyi vérzés?', placeholder:'pl. 4 hét' },
+        { id:'verzes_most',  tip:'single', cim:'Jelenleg van még vérzés vagy barnázás?', valaszok:['Igen','Nem'] },
+        { id:'kontroll',     tip:'single', cim:'Volt kontrollvizsgálatod?', valaszok:['Igen - minden rendben','Igen - volt eltérés','Nem volt még'] },
+      ]},
+      { cim: '🌸 Gát és medencefenék', kerdesek: [
+        { id:'gat_tunet',    tip:'multi',  cim:'Tapasztalsz:', valaszok:['Gáttáji fájdalmat','Húzó érzést','Hegfájdalmat','Székelési problémát','Vizelettartási nehézséget','Szélvisszatartási nehézséget','Egyiket sem'] },
+        { id:'medence_gyenge',tip:'single',cim:'Érzel gyengeséget a medencefenék területén?', valaszok:['Igen','Nem','Nem tudom'] },
+        { id:'heg_allapot',  tip:'single', cim:'Császármetszés esetén — a heg állapota:', valaszok:['Panaszmentes','Érzékeny','Zsibbad','Fájdalmas','Nem volt császármetszés'] },
+      ]},
+      { cim: '🤱 Szoptatás', kerdesek: [
+        { id:'szoptat',      tip:'single', cim:'Szoptatsz?', valaszok:['Kizárólag szoptatás','Részben (vegyes)','Nem'] },
+        { id:'szoptat_prob', tip:'multi',  cim:'Volt vagy van:', valaszok:['Mellgyulladás','Tejcsatorna-elzáródás','Fájdalmas szoptatás','Sebes mellbimbó','Kevés tej','Túl sok tej','Egyik sem'] },
+        { id:'szoptat_biz',  tip:'slider', cim:'Mennyire érzed magad magabiztosnak a szoptatásban?', min:1, max:10, alapertek:6 },
+        { id:'baba_tap',     tip:'single', cim:'A baba táplálása:', valaszok:['Kizárólag anyatejes','Anyatej + tápszer','Tápszeres'] },
+        { id:'szoptat_kerdes',tip:'szoveg',cim:'Van kérdés vagy bizonytalanság a szoptatással kapcsolatban?', placeholder:'...' },
+      ]},
+      { cim: '😴 Alvás', kerdesek: [
+        { id:'alvas_ossz',   tip:'szam',   cim:'Átlagosan hány órát alszol 24 óra alatt?', placeholder:'pl. 5' },
+        { id:'alvas_kipih',  tip:'slider', cim:'Mennyire érzed magad kipihentnek?', min:1, max:10, alapertek:4 },
+        { id:'alvas_kikapc', tip:'single', cim:'Ki tudsz kapcsolódni, amikor a baba alszik?', valaszok:['Igen','Néha','Nem'] },
+      ]},
+      { cim: '🍽️ Táplálkozás', kerdesek: [
+        { id:'etkezes_db',   tip:'szam',   cim:'Naponta hányszor eszel?', placeholder:'pl. 3' },
+        { id:'etkezes_van_ido',tip:'single',cim:'Van időd rendszeresen étkezni?', valaszok:['Igen','Többnyire','Ritkán','Nem'] },
+        { id:'etkezes_mod',  tip:'multi',  cim:'Előfordul, hogy:', valaszok:['Kihagyok étkezéseket','Egész nap csak kapkodva eszem','Estére eszem a legtöbbet','Rendszertelenül étkezem','Egyik sem'] },
+        { id:'vizbevetel',   tip:'szam',   cim:'Napi folyadékbevitel (liter)', placeholder:'pl. 2' },
+        { id:'viz_szoptat',  tip:'single', cim:'Szoptatás mellett tudsz elegendő folyadékot inni?', valaszok:['Igen','Nem'] },
+        { id:'feherje_napi', tip:'single', cim:'Naponta fogyasztasz valamilyen fehérjeforrást?', valaszok:['Minden főétkezésnél','Többnyire','Ritkán','Nem figyelem'] },
+        { id:'feherje_forras',tip:'multi', cim:'Fehérjeforrások:', valaszok:['Tojás','Hal','Csirke','Vörös hús','Tejtermékek','Hüvelyesek','Olajos magvak'] },
+        { id:'vitaminok',    tip:'multi',  cim:'Szeded jelenleg:', valaszok:['Multivitamin','D-vitamin','Omega-3','Magnézium','Vas','Probiotikum','Prebiotikum','Egyéb'] },
+      ]},
+      { cim: '🦠 Emésztőrendszer', kerdesek: [
+        { id:'emesztes',     tip:'multi',  cim:'Tapasztalsz:', valaszok:['Puffadást','Székrekedést','Hasmenést','Refluxot','Hasi fájdalmat','Egyiket sem'] },
+        { id:'szeklet_napi', tip:'single', cim:'Naponta van székleted?', valaszok:['Igen','Nem'] },
+      ]},
+      { cim: '💙 Hangulat és érzelmi állapot', kerdesek: [
+        { id:'tulterhelt',   tip:'single', cim:'Milyen gyakran érzed magad túlterheltnek?', valaszok:['Gyakran','Néha','Ritkán'] },
+        { id:'sirok',        tip:'single', cim:'Milyen gyakran sírsz ok nélkül?', valaszok:['Gyakran','Néha','Ritkán'] },
+        { id:'maganyos',     tip:'single', cim:'Milyen gyakran érzed magad magányosnak?', valaszok:['Gyakran','Néha','Ritkán'] },
+        { id:'szorong',      tip:'single', cim:'Milyen gyakran szorogsz?', valaszok:['Gyakran','Néha','Ritkán'] },
+        { id:'kiegyensulyoz',tip:'single', cim:'Milyen gyakran érzed magad kiegyensúlyozottnak?', valaszok:['Gyakran','Néha','Ritkán'] },
+        { id:'tamogatottsag',tip:'slider', cim:'Mennyire érzed magad támogatottnak?', min:1, max:10, alapertek:5 },
+        { id:'segitseg_kitol',tip:'multi', cim:'Leginkább kitől kapsz segítséget?', valaszok:['Partner','Család','Barátok','Senki','Egyéb'] },
+        { id:'nem_mondod',   tip:'szoveg', cim:'Van olyan érzés vagy nehézség, amiről nem nagyon beszélsz másoknak?', placeholder:'...' },
+      ]},
+      { cim: '😰 Stressz', kerdesek: [
+        { id:'stressz_szint',tip:'slider', cim:'Mennyire érzed stresszesnek az életedet jelenleg?', min:1, max:10, alapertek:5 },
+        { id:'stressz_ok',   tip:'multi',  cim:'Mi jelenti most a legnagyobb kihívást?', valaszok:['Alváshiány','Szoptatás','Baba sírása','Párkapcsolat','Háztartás','Anyagi helyzet','Segítség hiánya','Saját egészségem','Egyéb'] },
+      ]},
+      { cim: '👶 A baba állapota', kerdesek: [
+        { id:'baba_allapot', tip:'multi',  cim:'A baba:', valaszok:['Nyugodt','Sokat sír','Hasfájós','Gyakran ébred','Nehezen alszik el','Gyakran bukik','Egyéb'] },
+        { id:'baba_jelzesek',tip:'slider', cim:'Mennyire érzed magad magabiztosnak a baba jelzéseinek értelmezésében?', min:1, max:10, alapertek:6 },
+      ]},
+      { cim: '🏃 Mozgás és idő magadra', kerdesek: [
+        { id:'mozgas',       tip:'single', cim:'Mozogsz jelenleg rendszeresen?', valaszok:['Igen','Nem','Szeretnék, de még nem tudok'] },
+        { id:'mozgas_forma', tip:'szoveg', cim:'Mit mozogsz?', placeholder:'pl. séta a babával' },
+        { id:'ido_magadra',  tip:'single', cim:'Van időd saját magadra?', valaszok:['Rendszeresen','Néha','Ritkán','Szinte soha'] },
+      ]},
+      { cim: '🎯 Célok', kerdesek: [
+        { id:'miert_jelent', tip:'szoveg', cim:'Miért jelentkeztél hozzám?', placeholder:'...' },
+        { id:'segitseg',     tip:'szoveg', cim:'Mi az a 3 dolog, amiben a leginkább segítséget szeretnél?', placeholder:'1. ...\n2. ...\n3. ...' },
+        { id:'nehezseg',     tip:'szoveg', cim:'Mi az, ami jelenleg a legjobban megnehezíti a mindennapjaidat?', placeholder:'...' },
+      ]},
     ]
   },
 
