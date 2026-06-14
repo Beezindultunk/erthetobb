@@ -3143,6 +3143,21 @@ function oldal(id) {
   if (id === 'o-konzultans')        setTimeout(konzListaFrissit, 60);
   if (id === 'o-ugyfel')            setTimeout(ugyfelFoOldalFrissit, 60);
   if (id === 'o-chat')              setTimeout(chatBetolt, 60);
+  // ── Korábban hiányzó hook-ok ──
+  if (id === 'o-lecke')             setTimeout(leckeBetolt, 60);
+  if (id === 'o-kviz')              setTimeout(kvizBetolt, 60);
+  if (id === 'o-merfoldk')          setTimeout(merfoldk_betolt, 60);
+  if (id === 'o-profil')            setTimeout(profilBetolt, 60);
+  if (id === 'o-szokasok')          setTimeout(() => szokasokBetolt('oldal'), 60);
+  if (id === 'o-recept')            setTimeout(recept_betolt, 60);
+  if (id === 'o-heti-ossz')         setTimeout(hetiOsszFrissit, 60);
+  if (id === 'o-blues')             setTimeout(bluesBetolt, 60);
+  if (id === 'o-ciklus')            setTimeout(ciklusBetolt, 60);
+  if (id === 'o-vitamin')           setTimeout(vitaminBetolt, 60);
+  if (id === 'o-trimeszter')        setTimeout(trimeszterBetolt, 60);
+  if (id === 'o-szoptatas')         setTimeout(szoptatasBetolt, 60);
+  if (id === 'o-program-zaras')     setTimeout(programZarasBetolt, 60);
+  if (id === 'o-elorejelzes')       setTimeout(elorejelzesRender, 60);
 }
 
 function vissza() {
@@ -7882,233 +7897,149 @@ let kvizAllapot = JSON.parse(
 
 let kvizAktualis = { prog: null, het: null, kerdesIdx: 0, valaszok: {} };
 
+
+function kvizValaszt(valaszIdx) {
+  if (!kvizAktualis || !kvizAktualis.kerdesek) return;
+  if (kvizAktualis.valaszok[kvizAktualis.kerdesIdx] !== undefined) return;
+  kvizAktualis.valaszok[kvizAktualis.kerdesIdx] = valaszIdx;
+  kvizKerdesMutat();
+}
+
 function kvizBetolt() {
   const u = bejelentkezettUser || {};
   const prog = u.program || 'eletmod';
   const het  = u.het || 1;
   const el   = document.getElementById('kviz-tartalom');
-  const jetJel = document.getElementById('kviz-het-jel');
   if (!el) return;
-  if (jetJel) jetJel.textContent = het + '. hét';
 
   const kvizLista = KVIZ_ADATBAZIS[prog] || KVIZ_ADATBAZIS.eletmod;
+  const ma = new Date().toDateString();
+  const maiKvizKesz = localStorage.getItem('napi_kviz_datum') === ma;
 
-  // Aktuális kvíz — a legközelebbi elérhető héthez
-  const elerheto = kvizLista.filter(k => k.het <= het);
+  // Ha már megcsináltuk ma
+  if (maiKvizKesz) {
+    const eredmeny = JSON.parse(localStorage.getItem('napi_kviz_eredmeny') || '{}');
+    el.innerHTML = `
+      <div style="text-align:center;padding:30px 20px">
+        <div style="font-size:52px;margin-bottom:12px">${eredmeny.pontok === eredmeny.max ? '🌟' : '✅'}</div>
+        <div style="font-size:18px;font-weight:900;color:var(--s900);margin-bottom:8px">
+          Ma már kitöltötted a kvízt!
+        </div>
+        <div style="font-size:14px;color:var(--s600);margin-bottom:16px">
+          Eredményed: ${eredmeny.pontok || 0}/${eredmeny.max || 3} helyes válasz
+        </div>
+        <div style="background:var(--zold-v);border:1.5px solid var(--zold-k);border-radius:var(--r);
+          padding:14px;font-size:13px;color:var(--zold-s);margin-bottom:16px">
+          💡 Holnap újra megpróbálhatod — minden nap új kérdések várnak!
+        </div>
+        <button onclick="vissza()" class="gomb g-kek">
+          <span>← Vissza a főoldalra</span>
+        </button>
+      </div>`;
+    return;
+  }
+
+  // Elérhető kérdések összeállítása — az eddigi hetekből
+  const elerheto = kvizLista.filter(k => k.het <= Math.max(het, 1));
   if (elerheto.length === 0) {
-    el.innerHTML = `<div style="text-align:center;padding:40px 20px">
-      <div style="font-size:52px;margin-bottom:12px">🧠</div>
-      <div style="font-size:16px;font-weight:800;color:var(--s900)">Az első kvíz hamarosan!</div>
-      <div style="font-size:13px;color:var(--s500);margin-top:8px">A programod előrehaladtával hetente új kvízek nyílnak meg.</div>
-    </div>`;
+    // Ha nincs elérhető — mutassuk az 1. hetet
+    elerheto.push(kvizLista[0]);
+  }
+
+  // Random 3 kérdés az összes elérhetőből
+  const osszes_kerdes = elerheto.flatMap(k => k.kerdesek || []);
+  const kevertek = osszes_kerdes.sort(() => Math.random() - 0.5).slice(0, 3);
+
+  if (kevertek.length === 0) {
+    el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--s500)">Kvíz kérdések betöltése...</div>';
     return;
   }
 
-  // Összesítő lista renderelése
-  el.innerHTML = `
-    <!-- Fejléc -->
-    <div style="background:linear-gradient(135deg,var(--lila-v),white);border:1.5px solid var(--lila-k);
-      border-radius:var(--r);padding:18px;margin-bottom:14px;text-align:center">
-      <div style="font-size:40px;margin-bottom:8px">🧠</div>
-      <div style="font-size:17px;font-weight:900;color:var(--s900);margin-bottom:6px">Heti kvízek</div>
-      <div style="font-size:13px;color:var(--s600)">Teszteld a tudásod — minden héten 3 kérdés</div>
-    </div>
-
-    <!-- Kvíz lista -->
-    <div class="k" style="overflow:hidden;margin-bottom:14px">
-      ${kvizLista.map(k => {
-        const kulcs = prog + '_het' + k.het;
-        const kesz  = kvizAllapot[kulcs];
-        const elerheto = k.het <= het;
-        return `
-        <button onclick="${elerheto ? 'kvizIndit(&quot;' + prog + '&quot;,' + k.het + ')' : 'toast(&quot;🔒 Ez a kvíz még nem nyílt meg&quot;)'}"
-          style="display:flex;align-items:center;gap:13px;padding:13px 16px;width:100%;
-          border:none;background:${kesz ? 'var(--zold-v)' : 'white'};
-          cursor:${elerheto ? 'pointer' : 'default'};text-align:left;
-          border-bottom:1px solid var(--s100);transition:background .15s">
-          <div style="width:38px;height:38px;border-radius:11px;flex-shrink:0;
-            background:${kesz ? 'var(--zold)' : elerheto ? 'var(--lila-v)' : 'var(--s100)'};
-            display:flex;align-items:center;justify-content:center;font-size:18px;
-            border:1.5px solid ${kesz ? 'var(--zold-k)' : elerheto ? 'var(--lila-k)' : 'var(--s200)'}">
-            ${kesz ? '✓' : elerheto ? '🧠' : '🔒'}
-          </div>
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:${k.het === het ? 800 : 600};
-              color:${kesz ? 'var(--zold-s)' : elerheto ? 'var(--s900)' : 'var(--s400)'}">
-              ${k.het}. hét — ${k.cim}
-              ${k.het === het && !kesz ? '<span style="font-size:10px;font-weight:700;background:var(--lila);color:white;padding:2px 8px;border-radius:999px;margin-left:6px">ÚJ</span>' : ''}
-            </div>
-            <div style="font-size:11px;color:var(--s500);margin-top:2px">
-              ${kesz ? '✅ ' + kesz.pontok + '/' + kesz.max + ' pont · ' + kesz.datum :
-                elerheto ? k.kerdesek.length + ' kérdés · kb. 2 perc' :
-                '🔒 ' + (k.het - het) + ' hét múlva nyílik meg'}
-            </div>
-          </div>
-          ${k.het === het && !kesz ? '<span style="color:var(--lila);font-size:18px">›</span>' :
-            kesz ? '<span style="color:var(--zold);font-size:16px">★</span>' :
-            '<span style="color:var(--s300);font-size:18px">›</span>'}
-        </button>`;
-      }).join('')}
-    </div>
-
-    <!-- Összesített stat -->
-    <div class="k kp" style="text-align:center">
-      <div style="font-size:13px;font-weight:800;margin-bottom:10px">📊 Összesített eredmény</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-        <div style="background:var(--lila-v);border-radius:10px;padding:10px">
-          <div style="font-size:22px;font-weight:900;color:var(--lila)">
-            ${Object.keys(kvizAllapot).filter(k=>k.startsWith(prog)).length}
-          </div>
-          <div style="font-size:10px;color:var(--s500)">elvégzett</div>
-        </div>
-        <div style="background:var(--zold-v);border-radius:10px;padding:10px">
-          <div style="font-size:22px;font-weight:900;color:var(--zold)">
-            ${Object.values(kvizAllapot).filter((v,i) => Object.keys(kvizAllapot)[i]?.startsWith(prog)).reduce((a,b)=>a+(b.pontok||0),0)}
-          </div>
-          <div style="font-size:10px;color:var(--s500)">összpont</div>
-        </div>
-        <div style="background:var(--narancs-v);border-radius:10px;padding:10px">
-          <div style="font-size:22px;font-weight:900;color:var(--narancs)">
-            ${kvizLista.filter(k=>k.het <= het).length - Object.keys(kvizAllapot).filter(k=>k.startsWith(prog)).length}
-          </div>
-          <div style="font-size:10px;color:var(--s500)">vár rád</div>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function kvizIndit(prog, het) {
-  const kulcs = prog + '_het' + het;
-  if (kvizAllapot[kulcs]) {
-    // Már kitöltött — eredmény mutatása
-    kvizEredmenyMutat(prog, het, kvizAllapot[kulcs].valaszok);
-    return;
-  }
-  kvizAktualis = { prog, het, kerdesIdx: 0, valaszok: {} };
+  kvizAktualis = { prog, het, kerdesIdx: 0, valaszok: {}, kerdesek: kevertek };
   kvizKerdesMutat();
 }
 
 function kvizKerdesMutat() {
-  const { prog, het, kerdesIdx } = kvizAktualis;
-  const lista = KVIZ_ADATBAZIS[prog] || KVIZ_ADATBAZIS.eletmod;
-  const kviz  = lista.find(k => k.het === het);
-  if (!kviz) return;
   const el = document.getElementById('kviz-tartalom');
   if (!el) return;
+  const { kerdesek, kerdesIdx, valaszok } = kvizAktualis;
+  if (!kerdesek || kerdesek.length === 0) return;
 
-  if (kerdesIdx >= kviz.kerdesek.length) {
+  // Ha vége — eredmény
+  if (kerdesIdx >= kerdesek.length) {
     kvizKikuldErtekeles();
     return;
   }
 
-  const k   = kviz.kerdesek[kerdesIdx];
-  const pct = Math.round(kerdesIdx / kviz.kerdesek.length * 100);
+  const k = kerdesek[kerdesIdx];
+  const marValasztott = valaszok[kerdesIdx] !== undefined;
 
   el.innerHTML = `
-    <!-- Progress -->
-    <div style="margin-bottom:16px">
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--s500);margin-bottom:6px">
-        <span>${kviz.het}. hét — ${kviz.cim}</span>
-        <span>${kerdesIdx + 1} / ${kviz.kerdesek.length}</span>
+    <!-- Fejléc -->
+    <div style="background:linear-gradient(135deg,var(--lila-v),white);border:1.5px solid var(--lila-k);
+      border-radius:var(--r);padding:16px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;color:var(--lila);text-transform:uppercase">
+          Napi kvíz 🧠
+        </div>
+        <div style="font-size:12px;color:var(--s500)">${kerdesIdx+1} / ${kerdesek.length} kérdés</div>
       </div>
-      <div style="background:var(--s100);border-radius:999px;height:6px;overflow:hidden">
-        <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,var(--lila),var(--kek));
-          border-radius:999px;transition:width .4s"></div>
+      <!-- Progress -->
+      <div style="background:var(--s100);border-radius:999px;height:6px">
+        <div style="background:var(--lila);border-radius:999px;height:6px;
+          width:${Math.round((kerdesIdx/kerdesek.length)*100)}%;transition:width .4s ease"></div>
       </div>
     </div>
 
     <!-- Kérdés -->
-    <div style="background:linear-gradient(135deg,var(--lila-v),white);border:1.5px solid var(--lila-k);
-      border-radius:var(--r);padding:20px;margin-bottom:14px;text-align:center">
-      <div style="font-size:11px;font-weight:700;color:var(--lila);text-transform:uppercase;
-        letter-spacing:.07em;margin-bottom:10px">${kerdesIdx + 1}. kérdés</div>
-      <div style="font-size:16px;font-weight:800;color:var(--s900);line-height:1.5">${k.k}</div>
+    <div class="k kp" style="margin-bottom:14px">
+      <div style="font-size:16px;font-weight:800;color:var(--s900);line-height:1.5;margin-bottom:16px">
+        ${k.k}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px" id="valasz-lista">
+        ${k.opt.map((opt, oi) => {
+          const valasztva = valaszok[kerdesIdx] === oi;
+          const helyes_e = oi === k.helyes;
+          let bg = 'white', brd = 'var(--s200)', szin = 'var(--s700)';
+          if (marValasztott) {
+            if (helyes_e) { bg = 'var(--zold-v)'; brd = 'var(--zold)'; szin = 'var(--zold-s)'; }
+            else if (valasztva) { bg = 'var(--piros-v)'; brd = 'var(--piros)'; szin = 'var(--piros)'; }
+          }
+          return `<button onclick="kvizValaszt(${oi})"
+            ${marValasztott ? 'disabled' : ''}
+            style="padding:13px 16px;border-radius:10px;text-align:left;font-size:14px;
+            border:2px solid ${brd};background:${bg};color:${szin};
+            cursor:${marValasztott ? 'default' : 'pointer'};transition:all .2s;
+            display:flex;align-items:center;gap:10px;font-weight:600;width:100%">
+            <span style="width:24px;height:24px;border-radius:50%;border:2px solid ${brd};
+              background:${marValasztott && helyes_e ? 'var(--zold)' : marValasztott && valasztva ? 'var(--piros)' : 'transparent'};
+              display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;color:white">
+              ${marValasztott && helyes_e ? '✓' : marValasztott && valasztva && !helyes_e ? '✗' : ''}
+            </span>
+            ${opt}
+          </button>`;
+        }).join('')}
+      </div>
     </div>
 
-    <!-- Válasz gombok -->
-    <div style="display:flex;flex-direction:column;gap:9px" id="valasz-lista">
-      ${k.opt.map((o, oi) => `
-      <button onclick="kvizValaszt(${oi})" id="valasz-btn-${oi}"
-        style="padding:14px 16px;border-radius:11px;border:1.5px solid var(--s200);
-        background:white;cursor:pointer;text-align:left;font-size:14px;color:var(--s700);
-        transition:all .2s;display:flex;align-items:center;gap:12px;line-height:1.4"
-        onmouseover="this.style.borderColor='var(--lila)';this.style.background='var(--lila-v)'"
-        onmouseout="if(!this.dataset.selected){this.style.borderColor='var(--s200)';this.style.background='white'}">
-        <div style="width:28px;height:28px;border-radius:50%;border:2px solid var(--s200);
-          background:var(--s50);flex-shrink:0;display:flex;align-items:center;
-          justify-content:center;font-size:12px;font-weight:700;color:var(--s500)">
-          ${['A','B','C','D'][oi]}
-        </div>
-        <span>${o}</span>
-      </button>`).join('')}
+    <!-- Magyarázat ha már válaszolt -->
+    ${marValasztott ? `
+    <div style="background:${valaszok[kerdesIdx]===k.helyes?'var(--zold-v)':'var(--kek-v)'};
+      border:1.5px solid ${valaszok[kerdesIdx]===k.helyes?'var(--zold-k)':'var(--kek-k)'};
+      border-radius:var(--r);padding:14px;margin-bottom:14px;font-size:13px;
+      color:var(--s700);line-height:1.65">
+      <strong style="color:${valaszok[kerdesIdx]===k.helyes?'var(--zold-s)':'var(--kek)'}">
+        ${valaszok[kerdesIdx]===k.helyes ? '✅ Helyes!' : '💡 Helyes válasz: ' + k.opt[k.helyes]}
+      </strong><br><br>${k.magyarazat}
     </div>
-
-    ${kerdesIdx > 0 ? `
-    <button onclick="kvizVisszaLep()"
-      style="margin-top:12px;background:none;border:none;color:var(--s400);
-      font-size:12px;cursor:pointer">← Előző kérdés</button>` : ''}
+    <button onclick="kvizAktualis.kerdesIdx++;kvizKerdesMutat()" class="gomb g-lila">
+      <span>${kerdesIdx+1 < kerdesek.length ? 'Következő kérdés' : 'Eredmény megtekintése'}</span>
+      <span>${kerdesIdx+1 < kerdesek.length ? '→' : '🏆'}</span>
+    </button>
+    ` : ''}
   `;
 }
 
-function kvizValaszt(valaszIdx) {
-  const { prog, het, kerdesIdx } = kvizAktualis;
-  const lista = KVIZ_ADATBAZIS[prog] || KVIZ_ADATBAZIS.eletmod;
-  const kviz  = lista.find(k => k.het === het);
-  const k     = kviz.kerdesek[kerdesIdx];
-  const helyes = valaszIdx === k.helyes;
-
-  kvizAktualis.valaszok[kerdesIdx] = valaszIdx;
-
-  // Vizuális visszajelzés
-  k.opt.forEach((_, oi) => {
-    const btn = document.getElementById('valasz-btn-' + oi);
-    if (!btn) return;
-    btn.style.cursor = 'default';
-    btn.onmouseover = null; btn.onmouseout = null;
-    if (oi === k.helyes) {
-      btn.style.background = 'var(--zold-v)';
-      btn.style.borderColor = 'var(--zold)';
-      btn.style.color = 'var(--zold-s)';
-    } else if (oi === valaszIdx) {
-      btn.style.background = 'var(--piros-v)';
-      btn.style.borderColor = 'var(--piros)';
-      btn.style.color = 'var(--piros)';
-    }
-  });
-
-  // Magyarázat megjelenítése
-  const lista2 = document.getElementById('valasz-lista');
-  if (lista2) {
-    const magyarDiv = document.createElement('div');
-    magyarDiv.style.cssText = `margin-top:12px;padding:14px;border-radius:11px;
-      background:${helyes ? 'var(--zold-v)' : 'var(--kek-v)'};
-      border:1.5px solid ${helyes ? 'var(--zold-k)' : 'var(--kek-k)'};
-      font-size:13px;color:var(--s700);line-height:1.65`;
-    magyarDiv.innerHTML = `
-      <strong style="color:${helyes ? 'var(--zold-s)' : 'var(--kek)'}">
-        ${helyes ? '✅ Helyes!' : '💡 Helyes válasz: ' + k.opt[k.helyes]}
-      </strong><br>${k.magyarazat}`;
-    lista2.appendChild(magyarDiv);
-  }
-
-  // Következő gomb
-  setTimeout(() => {
-    const tartalom = document.getElementById('kviz-tartalom');
-    if (!tartalom) return;
-    const kovetkezo = document.createElement('button');
-    kovetkezo.className = 'gomb g-lila';
-    kovetkezo.style.marginTop = '12px';
-    kovetkezo.innerHTML = kerdesIdx + 1 < kviz.kerdesek.length
-      ? '<span>Következő kérdés</span><span>→</span>'
-      : '<span>Eredmény megtekintése</span><span>🏆</span>';
-    kovetkezo.onclick = () => {
-      kvizAktualis.kerdesIdx++;
-      kvizKerdesMutat();
-    };
-    tartalom.appendChild(kovetkezo);
-  }, 400);
-}
 
 function kvizVisszaLep() {
   if (kvizAktualis.kerdesIdx > 0) {
@@ -8118,27 +8049,61 @@ function kvizVisszaLep() {
 }
 
 function kvizKikuldErtekeles() {
-  const { prog, het, valaszok } = kvizAktualis;
-  const lista = KVIZ_ADATBAZIS[prog] || KVIZ_ADATBAZIS.eletmod;
-  const kviz  = lista.find(k => k.het === het);
-  if (!kviz) return;
+  const { prog, het, valaszok, kerdesek } = kvizAktualis;
+  if (!kerdesek) return;
 
   let pontok = 0;
-  kviz.kerdesek.forEach((k, i) => {
+  kerdesek.forEach((k, i) => {
     if (valaszok[i] === k.helyes) pontok++;
   });
 
-  const kulcs = prog + '_het' + het;
-  kvizAllapot[kulcs] = {
-    kesz: true, pontok, max: kviz.kerdesek.length,
-    valaszok, datum: new Date().toLocaleDateString('hu-HU', {month:'short', day:'numeric'}),
-  };
-  localStorage.setItem('kviz_allapot', JSON.stringify(kvizAllapot));
+  // Napi kvíz mentés
+  const ma = new Date().toDateString();
+  localStorage.setItem('napi_kviz_datum', ma);
+  localStorage.setItem('napi_kviz_eredmeny', JSON.stringify({ pontok, max: kerdesek.length }));
 
-  // Napi kvíz pontok hozzáadása
-  naiKvizKesz(pontok, kviz.kerdesek.length);
+  // Pont hozzáadás
+  naiKvizKesz(pontok, kerdesek.length);
 
-  kvizEredmenyMutat(prog, het, valaszok);
+  // Eredmény megjelenítés
+  const el = document.getElementById('kviz-tartalom');
+  if (!el) return;
+
+  const pct = Math.round(pontok / kerdesek.length * 100);
+  const [emoji, uzenet, szin] = pct === 100
+    ? ['🌟', 'Tökéletes! Mindent tudtál!', 'var(--zold)']
+    : pct >= 67
+      ? ['👍', 'Szuper! Jól ment!', 'var(--kek)']
+      : ['💪', 'Jó próbálkozás! A magyarázatokból sokat tanulhattál.', 'var(--narancs)'];
+
+  const pontszerzett = pct === 100 ? 25 : 15;
+
+  el.innerHTML = `
+    <div style="background:linear-gradient(135deg,var(--lila-v),white);border:1.5px solid var(--lila-k);
+      border-radius:var(--r);padding:28px 20px;margin-bottom:14px;text-align:center">
+      <div style="font-size:56px;margin-bottom:12px">${emoji}</div>
+      <div style="font-size:48px;font-weight:900;color:${szin};margin-bottom:8px">${pontok}/${kerdesek.length}</div>
+      <div style="font-size:17px;font-weight:800;color:var(--s900);margin-bottom:10px">${uzenet}</div>
+      <div style="display:flex;justify-content:center;gap:10px;margin:12px 0">
+        ${kerdesek.map((_,i) => {
+          const jo = valaszok[i] === kerdesek[i].helyes;
+          return '<div style="width:16px;height:16px;border-radius:50%;background:' + (jo ? 'var(--zold)' : 'var(--piros)') + '"></div>';
+        }).join('')}
+      </div>
+      <div style="background:var(--sarga-v);border:1.5px solid var(--sarga);border-radius:10px;
+        padding:10px;margin-top:14px;font-size:13px;font-weight:700;color:var(--s800)">
+        +${pontszerzett} pont szereztél! ⭐
+      </div>
+    </div>
+    <button onclick="vissza()" class="gomb g-kek">
+      <span>← Vissza a főoldalra</span>
+    </button>
+    <div style="text-align:center;margin-top:10px;font-size:12px;color:var(--s400)">
+      Holnap újra megpróbálhatod 💙
+    </div>
+  `;
+
+  kvizBadgeFrissit();
 }
 
 function kvizEredmenyMutat(prog, het, valaszok) {
