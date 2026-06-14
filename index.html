@@ -170,6 +170,30 @@ button{cursor:pointer;font-family:inherit;border:none;background:none}
   background:#1e3a8a;color:white;font-size:12px;font-weight:700;
   text-align:center;padding:8px;z-index:9998"></div>
 
+
+<!-- ════════════════════════════════════
+     💬 CHAT ELŐZMÉNY PANEL (konzultáns)
+════════════════════════════════════ -->
+<div class="oldal" id="o-chat-elozmeny">
+  <div class="fejlec">
+    <button class="vissza-btn" onclick="vissza()">← Vissza</button>
+    <span class="fejlec-cim">💬 Chat előzmények</span>
+  </div>
+  <div class="tartalom">
+    <div id="chat-elozmeny-header" class="k kp" style="margin-bottom:14px">
+      <div style="font-size:13px;font-weight:800;color:var(--s900)" id="chat-elozmeny-nev">—</div>
+      <div style="font-size:12px;color:var(--s500);margin-top:4px">AI Coach beszélgetések összefoglalója</div>
+      <div style="margin-top:10px;padding:10px;border-radius:9px;background:#fefce8;border:1px solid #fde047;
+        font-size:11px;color:#713f12;line-height:1.6">
+        ⚠️ Ezek a beszélgetések NEM minősülnek orvosi tanácsnak. Az AI tájékoztatást nyújt, de minden egészségügyi döntés a konzultáns és az ügyfél közös felelőssége.
+      </div>
+    </div>
+    <div id="konzultans-chat-elozmeny">
+      <!-- JS tölti -->
+    </div>
+  </div>
+</div>
+
 <!-- ════════════════════════════════════
      👤 PROFIL OLDAL
 ════════════════════════════════════ -->
@@ -2524,6 +2548,17 @@ Büszke lehetsz magadra — szuper hét volt! 💪
         <span class="snyil">›</span>
       </button>
 
+      <!-- Chat előzmények gomb -->
+      <button class="sor" onclick="chatElozményPanel(aktualisDashUgyfel)"
+        style="background:linear-gradient(135deg,var(--lila-v),white);border-color:var(--lila-k)">
+        <div class="si" style="background:var(--lila)">💬</div>
+        <div class="sinfo">
+          <div class="scim" style="color:var(--lila)">AI Chat előzmények</div>
+          <div class="sal">Ügyfél kérdései az AI coachnak</div>
+        </div>
+        <span class="snyil" style="color:var(--lila)">›</span>
+      </button>
+
       <!-- Program lezárás — 12. héttől jelenik meg -->
       <button class="sor" id="program-zaras-btn" onclick="oldal('o-program-zaras')"
         style="display:none;background:linear-gradient(135deg,#fef9c3,white);border-color:#f59e0b44">
@@ -3157,6 +3192,7 @@ function oldal(id) {
   if (id === 'o-trimeszter')        setTimeout(trimeszterBetolt, 60);
   if (id === 'o-szoptatas')         setTimeout(szoptatasBetolt, 60);
   if (id === 'o-program-zaras')     setTimeout(programZarasBetolt, 60);
+  if (id === 'o-chat-elozmeny')      setTimeout(() => {}, 60); // JS kezeli
   if (id === 'o-elorejelzes')       setTimeout(elorejelzesRender, 60);
 }
 
@@ -5326,7 +5362,7 @@ async function receptGenAI() {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        model:'claude-sonnet-4-5', max_tokens:600,
+        model:'claude-sonnet-4-6', max_tokens:600,
         system: 'Te egy táplálkozási AI chef vagy az Érthetőbb Egészség platformon. Adj egy egyszerű, gyors receptet. FONTOS ELVEK: sem kenyér, sem tészta, sem rizs, sem gabona, sem glutén. Csak igazi ételek: húsok, halak, tojás, zöldségek, jó zsírok. Program: ' + prog + '. Válaszolj JSON formátumban: {"nev":"...","ido":"...","emoji":"...","hozzavalok":["..."],"lepesek":["..."],"miert":"..."}',
         messages:[{role:'user', content:'Adj egy ' + prog + ' programhoz illő egyszerű receptet! Semmi glutén, csak valódi ételek.'}]
       })
@@ -8913,13 +8949,355 @@ const EVA_GYORS = {
   gyerekágy: ['Mit egyek szoptatás alatt?','Hogyan legyen több energiám?','Hogyan kezeljem az alváshiányt?','Normális hogy így érzem magam?'],
 };
 
+
+// ══════════════════════════════════════
+// 💾 CHAT ELŐZMÉNY — konzultáns számára
+// ══════════════════════════════════════
+
+
+function chatElozményPanel(ugyfelNev) {
+  const nevEl = document.getElementById('chat-elozmeny-nev');
+  if (nevEl) nevEl.textContent = ugyfelNev + ' — heti chat összefoglaló';
+  oldal('o-chat-elozmeny');
+  setTimeout(() => hetiOsszefoglaloMutat(ugyfelNev), 150);
+}
+
+
+// ══════════════════════════════════════
+// ⚖️ JOGI NYILATKOZAT + HETI ÖSSZEFOGLALÓ
+// ══════════════════════════════════════
+
+function chatJogiPopupMutat(kulcs) {
+  // Eltávolítjuk ha már van
+  const regi = document.getElementById('chat-jogi-popup');
+  if (regi) regi.remove();
+
+  const popup = document.createElement('div');
+  popup.id = 'chat-jogi-popup';
+  popup.style.cssText = `
+    position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9995;
+    display:flex;align-items:flex-end;justify-content:center;
+    animation:fadeIn .2s ease`;
+
+  popup.innerHTML = `
+    <div style="background:white;border-radius:20px 20px 0 0;padding:24px 20px 36px;
+      width:100%;max-width:540px;max-height:90vh;overflow-y:auto">
+
+      <div style="text-align:center;margin-bottom:18px">
+        <div style="font-size:36px;margin-bottom:8px">⚖️</div>
+        <div style="font-size:17px;font-weight:900;color:var(--s900)">Fontos nyilatkozat</div>
+        <div style="font-size:12px;color:var(--s500);margin-top:4px">Az AI Coach használata előtt</div>
+      </div>
+
+      <div style="background:#fefce8;border:1.5px solid #fde047;border-radius:12px;
+        padding:16px;margin-bottom:18px;font-size:13px;color:#713f12;line-height:1.7">
+        <strong>Az Érthetőbb Egészség AI Coach az alábbi feltételekkel vehető igénybe:</strong><br><br>
+        1. Az AI Coach által nyújtott információk kizárólag <strong>általános táplálkozási tájékoztatást</strong> tartalmaznak, ismeretterjesztés céljából.<br><br>
+        2. A chat tartalma <strong>semmilyen körülmények között nem minősül orvosi tanácsnak</strong>, diagnózisnak, terápiás javaslatnak vagy egészségügyi szolgáltatásnak.<br><br>
+        3. <strong>Egészségügyi döntés meghozatala előtt</strong> minden esetben kérd ki kezelőorvosod, szakorvosd véleményét.<br><br>
+        4. A konzultánsod a <strong>következő konzultáción átnézi a kérdéseidet</strong> és személyre szabott tanácsot ad.<br><br>
+        5. A beszélgetések <strong>rögzítésre kerülnek</strong> és a konzultánsod számára hozzáférhetők.
+      </div>
+
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:14px;
+        background:var(--s50);border-radius:10px;margin-bottom:20px;cursor:pointer"
+        onclick="chatJogiPipaToggle()">
+        <div id="jogi-pipa-box" style="width:22px;height:22px;border-radius:5px;
+          border:2px solid var(--s300);background:white;flex-shrink:0;margin-top:1px;
+          display:flex;align-items:center;justify-content:center;transition:all .15s">
+        </div>
+        <div style="font-size:13px;color:var(--s700);line-height:1.5">
+          Elolvastam és megértettem a fenti nyilatkozatot. Elfogadom, hogy az AI Coach nem nyújt orvosi tanácsot, és egészségügyi döntés előtt orvoshoz fordulok.
+        </div>
+      </div>
+
+      <button id="jogi-elfogad-btn" onclick="chatJogiElfogad('${kulcs}')"
+        disabled
+        style="width:100%;padding:14px;border-radius:12px;
+        background:var(--s200);color:var(--s400);border:none;
+        font-size:15px;font-weight:800;cursor:not-allowed;transition:all .2s">
+        Elfogadom és belépek a chatbe →
+      </button>
+
+      <div style="text-align:center;margin-top:12px">
+        <button onclick="vissza()" style="font-size:12px;color:var(--s400);background:none;border:none;cursor:pointer">
+          Mégsem — visszalépek
+        </button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(popup);
+}
+
+let jogiPipaAllapot = false;
+function chatJogiPipaToggle() {
+  jogiPipaAllapot = !jogiPipaAllapot;
+  const box = document.getElementById('jogi-pipa-box');
+  const btn = document.getElementById('jogi-elfogad-btn');
+  if (box) {
+    box.style.background    = jogiPipaAllapot ? 'var(--zold)' : 'white';
+    box.style.borderColor   = jogiPipaAllapot ? 'var(--zold)' : 'var(--s300)';
+    box.innerHTML           = jogiPipaAllapot ? '<span style="color:white;font-size:14px;font-weight:900">✓</span>' : '';
+  }
+  if (btn) {
+    btn.disabled      = !jogiPipaAllapot;
+    btn.style.background = jogiPipaAllapot ? 'var(--kek)' : 'var(--s200)';
+    btn.style.color      = jogiPipaAllapot ? 'white' : 'var(--s400)';
+    btn.style.cursor     = jogiPipaAllapot ? 'pointer' : 'not-allowed';
+  }
+}
+
+function chatJogiElfogad(kulcs) {
+  if (!jogiPipaAllapot) return;
+  localStorage.setItem(kulcs, new Date().toISOString());
+  jogiPipaAllapot = false;
+  const popup = document.getElementById('chat-jogi-popup');
+  if (popup) popup.remove();
+  chatBetolt(); // Most már betölt
+}
+
+// ══════════════════════════════════════
+// 📋 HETI CHAT ÖSSZEFOGLALÓ — konzultánsnak
+// ══════════════════════════════════════
+
+async function hetiChatOsszefoglalo(ugyfelEmail, het) {
+  const kulcs = 'chat_elozmeny_' + ugyfelEmail;
+  const osszes = JSON.parse(localStorage.getItem(kulcs) || '[]');
+
+  // Aktuális hét kérdései
+  const hetiKerdesek = osszes.filter(e => e.het === het);
+
+  if (hetiKerdesek.length === 0) return null;
+
+  // AI összefoglaló generálás
+  const apiKey = localStorage.getItem('claude_api_key');
+  if (!apiKey) {
+    // Alap összefoglaló AI nélkül
+    return hetiKerdesek.map(e =>
+      '• ' + e.datum + ': ' + e.kerdes + (e.valasz ? ' → ' + e.valasz.slice(0, 100) + '...' : '')
+    ).join('\n');
+  }
+
+  const kerdesLista = hetiKerdesek.map((e,i) =>
+    (i+1) + '. Kérdés: ' + e.kerdes + (e.valasz ? ' | Válasz: ' + e.valasz.slice(0, 200) : '')
+  ).join('\n');
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 400,
+        system: 'Te egy táplálkozási konzultáns asszisztense vagy. A következő heti chat beszélgetésből készíts egy tömör, szakmai összefoglalót a konzultánsnak. 3-5 mondat, pontokba szedve. Emeld ki: főbb témák, aggodalmak, figyelendő területek. Magyarul.',
+        messages: [{ role: 'user', content: 'Ügyfél heti chat kérdései:\n\n' + kerdesLista }]
+      })
+    });
+    const data = await resp.json();
+    return data.content?.[0]?.text || kerdesLista;
+  } catch(e) {
+    return kerdesLista;
+  }
+}
+
+async function hetiOsszefoglaloMutat(ugyfelNev) {
+  const u = UGYFELEK.find(x => x.nev === ugyfelNev) ||
+            Object.entries(DEMO_FELHASZANALOK).map(([email, adat]) => ({...adat, email}))
+              .find(x => x.nev === ugyfelNev);
+  if (!u) return;
+
+  const el = document.getElementById('konzultans-chat-elozmeny');
+  if (!el) return;
+
+  el.innerHTML = `<div style="padding:20px;text-align:center;color:var(--s500)">
+    <div style="font-size:24px;margin-bottom:8px">⏳</div>
+    <div style="font-size:13px">Összefoglaló generálása...</div>
+  </div>`;
+
+  const osszes = JSON.parse(localStorage.getItem('chat_elozmeny_' + u.email) || '[]');
+  const het    = u.het || 1;
+  const hetiK  = osszes.filter(e => e.het === het);
+  const osszesK= osszes;
+
+  const osszefogl = await hetiChatOsszefoglalo(u.email, het);
+
+  el.innerHTML = `
+    <!-- AI összefoglaló -->
+    <div style="background:linear-gradient(135deg,var(--lila-v),white);
+      border:1.5px solid var(--lila-k);border-radius:var(--r);padding:18px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--lila);
+        text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">
+        🤖 AI összefoglaló — ${het}. hét
+      </div>
+      <div style="font-size:13px;color:var(--s700);line-height:1.7;white-space:pre-line">
+        ${osszefogl || 'Nincs elegendő adat az összefoglalóhoz.'}
+      </div>
+    </div>
+
+    <!-- Statisztikák -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+      <div class="k kp" style="text-align:center">
+        <div style="font-size:24px;font-weight:900;color:var(--lila)">${hetiK.length}</div>
+        <div style="font-size:11px;color:var(--s500)">heti kérdés</div>
+      </div>
+      <div class="k kp" style="text-align:center">
+        <div style="font-size:24px;font-weight:900;color:var(--kek)">${osszesK.length}</div>
+        <div style="font-size:11px;color:var(--s500)">összes kérdés</div>
+      </div>
+      <div class="k kp" style="text-align:center">
+        <div style="font-size:24px;font-weight:900;color:var(--zold)">${het}</div>
+        <div style="font-size:11px;color:var(--s500)">jelenlegi hét</div>
+      </div>
+    </div>
+
+    <!-- Teljes átirat -->
+    <div style="font-size:13px;font-weight:800;color:var(--s900);margin-bottom:10px">
+      📝 Teljes átirat — ${het}. hét
+    </div>
+
+    ${hetiK.length === 0 ? `
+      <div style="text-align:center;padding:24px;color:var(--s400);font-size:13px">
+        Ezen a héten még nem volt chat kérdés.
+      </div>` :
+    hetiK.map((e, i) => `
+      <div style="border:1.5px solid var(--s200);border-radius:12px;
+        padding:14px;margin-bottom:10px;background:white">
+        <div style="font-size:10px;color:var(--s400);margin-bottom:8px">
+          ${e.datum} ${e.ido} · ${het}. hét
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <span style="background:var(--kek);color:white;font-size:10px;font-weight:700;
+            padding:2px 8px;border-radius:999px;flex-shrink:0">KÉRDÉS</span>
+          <div style="font-size:13px;color:var(--s800);line-height:1.5">${e.kerdes}</div>
+        </div>
+        ${e.valasz ? `
+        <div style="display:flex;gap:8px">
+          <span style="background:var(--lila);color:white;font-size:10px;font-weight:700;
+            padding:2px 8px;border-radius:999px;flex-shrink:0">ÉVA</span>
+          <div style="font-size:13px;color:var(--s600);line-height:1.5">${e.valasz}</div>
+        </div>` : ''}
+      </div>`).join('')}
+
+    <!-- Jogi nyilatkozat -->
+    <div style="margin-top:14px;padding:12px;border-radius:10px;
+      background:#fefce8;border:1px solid #fde047;
+      font-size:11px;color:#713f12;line-height:1.6">
+      ⚠️ Emlékeztető: Az AI Chat tartalma NEM minősül orvosi tanácsnak. A konzultáns felelőssége a személyes tanácsadás.
+    </div>
+  `;
+}
+
+function chatElozmenytMent(kerdés, valasz, ki) {
+  const u = bejelentkezettUser || {};
+  if (!u.email) return;
+
+  const kulcs = 'chat_elozmeny_' + u.email;
+  const meglevo = JSON.parse(localStorage.getItem(kulcs) || '[]');
+
+  const bejegyzes = {
+    datum: new Date().toLocaleDateString('hu-HU'),
+    ido:   new Date().toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'}),
+    het:   u.het || 1,
+    kerdes: kerdés,
+    valasz: valasz || null,
+  };
+
+  // Csak ha van valasz (teljes páros)
+  if (valasz) {
+    meglevo.push(bejegyzes);
+    // Max 50 bejegyzés
+    if (meglevo.length > 50) meglevo.shift();
+    localStorage.setItem(kulcs, JSON.stringify(meglevo));
+
+    // AT-ba is mentjük ha van token
+    if (AT.token !== 'SAJAT_TOKEN_IDE') {
+      atPost('naplok', {
+        'Ügyfél Email': u.email,
+        'Ügyfél Név': u.nev || '',
+        'Dátum': new Date().toISOString().split('T')[0],
+        'Étkezések': '[CHAT] K: ' + kerdés + ' | V: ' + (valasz || '').slice(0, 200),
+        'Hét': u.het || 1,
+        'Program': u.program || 'eletmod',
+      });
+    }
+  }
+}
+
+function chatElozmenyCsoport(ugyfelEmail) {
+  // Konzultáns nézethez — csoportosítva hetek szerint
+  const kulcs = 'chat_elozmeny_' + ugyfelEmail;
+  const elozmeny = JSON.parse(localStorage.getItem(kulcs) || '[]');
+  if (elozmeny.length === 0) return null;
+
+  // Hetek szerint csoportosítás
+  const hetek = {};
+  elozmeny.forEach(e => {
+    const het = 'het' + (e.het || 1);
+    if (!hetek[het]) hetek[het] = [];
+    hetek[het].push(e);
+  });
+  return { osszes: elozmeny.length, hetek };
+}
+
+function chatElozményMutat(ugyfelEmail) {
+  const adat = chatElozmenyCsoport(ugyfelEmail);
+  const el = document.getElementById('konzultans-chat-elozmeny');
+  if (!el) return;
+
+  if (!adat || adat.osszes === 0) {
+    el.innerHTML = '<div style="color:var(--s400);font-size:13px;padding:12px">Még nincs chat előzmény.</div>';
+    return;
+  }
+
+  let html = `<div style="font-size:13px;font-weight:800;color:var(--s900);margin-bottom:10px">
+    💬 Chat előzmény (${adat.osszes} párbeszéd)
+  </div>`;
+
+  Object.entries(adat.hetek).forEach(([het, bejegyzesek]) => {
+    html += `<div style="font-size:11px;font-weight:700;color:var(--lila);
+      text-transform:uppercase;margin:10px 0 6px">${het.replace('het','').trim()}. hét</div>`;
+    bejegyzesek.forEach(b => {
+      html += `<div style="border-left:3px solid var(--lila-k);padding:8px 12px;
+        margin-bottom:8px;background:var(--lila-v);border-radius:0 8px 8px 0">
+        <div style="font-size:10px;color:var(--s400);margin-bottom:4px">${b.datum} ${b.ido}</div>
+        <div style="font-size:12px;font-weight:700;color:var(--s700);margin-bottom:4px">
+          🙋 ${b.kerdes}
+        </div>
+        ${b.valasz ? `<div style="font-size:12px;color:var(--s600);line-height:1.5">
+          💙 ${b.valasz.slice(0, 150)}${b.valasz.length > 150 ? '...' : ''}
+        </div>` : ''}
+      </div>`;
+    });
+  });
+
+  el.innerHTML = html;
+}
+
 function chatBetolt() {
   const el = document.getElementById('chat-lista');
   if (!el) return;
   const u = bejelentkezettUser || {};
   const prog = u.program || 'eletmod';
+
+  // Jogi nyilatkozat elfogadva? Ha nem — popup
+  const nyilatkozatKulcs = 'chat_nyilatkozat_elfogadva_' + (u.email || 'demo');
+  if (!localStorage.getItem(nyilatkozatKulcs)) {
+    chatJogiPopupMutat(nyilatkozatKulcs);
+    return;
+  }
   if (chatUzenetek.length === 0) {
     chatUzenetek.push({ ki:'eva', nev:'Széplábi Éva', szoveg: EVA_UDVOZLO[prog] || EVA_UDVOZLO.eletmod, ido: new Date().toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'}) });
+    // Jogi nyilatkozat
+    chatUzenetek.push({
+      ki:'rendszer', nev:'ℹ️ Fontos tudnivaló',
+      szoveg: '⚠️ Ez a chat táplálkozási tájékoztatást nyújt általános ismeretterjesztés céljából. A beszélgetések tartalma NEM minősül orvosi tanácsnak, diagnózisnak vagy terápiás javaslatnak. Egészségügyi döntés előtt mindig kérd ki kezelőorvosod véleményét. A konzultánsod a következő találkozón átnézi a kérdéseidet. 💙',
+      ido: new Date().toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'})
+    });
   }
   el.innerHTML = chatUzenetek.map(u => chatUzenetHTML(u)).join('');
   if (chatUzenetek.length <= 2) {
@@ -8935,9 +9313,20 @@ function chatBetolt() {
 }
 
 function chatUzenetHTML(m) {
-  const en  = m.ki === 'en';
+  const en      = m.ki === 'en';
+  const rendszer= m.ki === 'rendszer';
   const ido = m.ido || new Date().toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'});
-  const igazit = en ? 'flex-end' : 'flex-start';
+
+  // Rendszer üzenet — középre, szürke kártya
+  if (rendszer) {
+    return `<div style="margin:8px 0 14px;padding:10px 14px;border-radius:10px;
+      background:#fefce8;border:1px solid #fde047;
+      font-size:12px;color:#713f12;line-height:1.6;text-align:center">
+      ${m.szoveg}
+    </div>`;
+  }
+
+  const igazit  = en ? 'flex-end' : 'flex-start';
   const hatter  = en ? 'var(--kek)' : 'white';
   const szovSzin= en ? 'white' : 'var(--s900)';
   const border  = en ? '' : 'border:1.5px solid var(--s200);box-shadow:0 1px 4px rgba(0,0,0,.06)';
@@ -8945,6 +9334,7 @@ function chatUzenetHTML(m) {
   const avatar  = en
     ? `<div style="width:32px;height:32px;border-radius:50%;background:var(--kek-v);border:1.5px solid var(--kek-k);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;align-self:flex-end">${(bejelentkezettUser?.nev||'T')[0]}</div>`
     : `<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--kek),var(--lila));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;align-self:flex-end">👩</div>`;
+
   return `<div style="display:flex;justify-content:${igazit};margin-bottom:12px;gap:8px;align-items:flex-end">
     ${!en ? avatar : ''}
     <div style="max-width:78%">
@@ -8976,6 +9366,10 @@ async function chatKuld() {
   if (gepSz) gepSz.textContent = 'Éva gépel...';
   const apiKey = localStorage.getItem('claude_api_key');
   await new Promise(r => setTimeout(r, 800 + Math.random() * 600));
+
+  // Chat előzmény mentés LocalStorage-ba (konzultáns látni fogja)
+  chatElozmenytMent(szoveg, null, 'user');
+
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -8986,7 +9380,7 @@ async function chatKuld() {
         'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model: 'claude-sonnet-4-6',
         max_tokens: 500,
         system: EVA_RENDSZER_UZENET(),
         messages: chatTortenet.slice(-10),
@@ -8997,6 +9391,7 @@ async function chatKuld() {
     const valasz = data.content?.[0]?.text || 'Most nem tudok válaszolni — próbáld újra! 💙';
     chatTortenet.push({ role:'assistant', content: valasz });
     chatUzenetek.push({ ki:'eva', nev:'Széplábi Éva', szoveg: valasz, ido: new Date().toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'}) });
+    chatElozmenytMent(szoveg, valasz, 'eva');
   } catch(e) {
     const fallback = ['Most épp lassú a kapcsolat — próbáld újra! 💙','A kérdésedet a következő konzultáción megbeszéljük! 💙','Sajnos most nem érek el — de holnap minden kérdésre válaszolok! 💙'];
     chatUzenetek.push({ ki:'eva', nev:'Széplábi Éva', szoveg: fallback[Math.floor(Math.random()*3)], ido: new Date().toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'}) });
@@ -9084,7 +9479,7 @@ function fotoFelvetel(etkezesId) {
         const resp = await fetch('https://api.anthropic.com/v1/messages', {
           method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({
-            model:'claude-sonnet-4-5', max_tokens:200,
+            model:'claude-sonnet-4-6', max_tokens:200,
             system:'Te egy táplálkozási AI vagy. Azonosítsd az ételt a képen. SOHA ne kommentáld a kalóriát. Értékeld a fehérje/zsír/zöldség arányt. Ha kenyér/gabona látható, javasolj gluténmentes alternatívát. Max 2 mondat, barátságosan, magyarul.',
             messages:[{role:'user', content:[
               {type:'image', source:{type:'base64', media_type:file.type, data:b64}},
@@ -9224,7 +9619,7 @@ async function aiElemez(nev, base64) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model: 'claude-sonnet-4-6',
         max_tokens: 300,
         messages: [{
           role: 'user',
