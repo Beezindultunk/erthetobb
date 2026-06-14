@@ -5810,13 +5810,13 @@ function naploPontHozzaad() {
 // ══════════════════════════════════════
 
 const EMAILJS_CONFIG = {
-  serviceId:  localStorage.getItem('emailjs_service') || 'EMAILJS_SERVICE_ID',
-  publicKey:  localStorage.getItem('emailjs_key')     || 'EMAILJS_PUBLIC_KEY',
+  serviceId:  localStorage.getItem('emailjs_service') || 'service_lk4izwl',
+  publicKey:  localStorage.getItem('emailjs_key')     || 'XCQistcUODAJGCH86',
   templates: {
-    uj_ugyfel:    'template_uj_ugyfel',
-    blues_alert:  'template_blues_alert',
-    program_vege: 'template_program_vege',
-    heti_emlek:   'template_heti_emlek',
+    uj_ugyfel:    'template_e1sg0pb',
+    blues_alert:  'template_dctkkwf',
+    program_vege: 'template_e1sg0pb',
+    heti_emlek:   'template_e1sg0pb',
   }
 };
 
@@ -5826,7 +5826,7 @@ function emailJSInit() {
   const script = document.createElement('script');
   script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
   script.onload = () => {
-    if (EMAILJS_CONFIG.publicKey !== 'EMAILJS_PUBLIC_KEY') {
+    if (EMAILJS_CONFIG.publicKey !== 'EMAILJS_PUBLIC_KEY' && EMAILJS_CONFIG.publicKey.length > 5) {
       window.emailjs.init({ publicKey: EMAILJS_CONFIG.publicKey });
     }
   };
@@ -5835,40 +5835,53 @@ function emailJSInit() {
 emailJSInit();
 
 async function emailErtesitesKuld({ tipas, ugyfelNev, ugyfelEmail, program, konzultansEmail, extraAdat = {} }) {
-  // Ha nincs EmailJS beállítva — Airtable-be mentjük a küldendő emailt
-  if (!window.emailjs || EMAILJS_CONFIG.publicKey === 'EMAILJS_PUBLIC_KEY') {
-    console.log('EmailJS nincs beállítva — Airtable-be mentve:', tipas);
-    // AT-ba mentjük hogy Éva lássa
-    if (AT.token !== 'SAJAT_TOKEN_IDE') {
-      await atPost('naplok', {
-        'Ügyfél Email': ugyfelEmail || '',
-        'Ügyfél Név': ugyfelNev || '',
-        'Dátum': new Date().toISOString().split('T')[0],
-        'Étkezések': '[EMAIL ÉRTESÍTÉS] ' + tipas + ' — ' + JSON.stringify(extraAdat),
-      });
-    }
+  const PROG_NEV = {eletmod:'Életmódváltás',elotte:'Várandósság előtt',alatt:'Várandósság alatt',gyerekágy:'Gyerekágy'};
+
+  // Ha nincs EmailJS beállítva — konzolba logoljuk
+  if (!window.emailjs) {
+    console.log('📧 Email (EmailJS nincs bekötve):', tipas, ugyfelNev);
     return;
   }
 
-  const PROG_NEV = {eletmod:'Életmódváltás',elotte:'Várandósság előtt',alatt:'Várandósság alatt',gyerekágy:'Gyerekágy'};
-  const templateId = EMAILJS_CONFIG.templates[tipas] || 'template_uj_ugyfel';
+  // Típus alapján sablon és tartalom meghatározása
+  // Ingyenes csomagnál csak 2 sablon van:
+  // blues_alert (template_dctkkwf) → sürgős értesítőknél
+  // program_vege (template_e1sg0pb) → általános értesítőknél
+
+  let templateId, extraSzoveg;
+
+  if (tipas === 'blues_alert') {
+    templateId  = 'template_dctkkwf';
+    extraSzoveg = '⚠️ SÜRGŐS! Pontszám: ' + JSON.stringify(extraAdat);
+  } else if (tipas === 'program_vege') {
+    templateId  = 'template_e1sg0pb';
+    extraSzoveg = '🏆 Program sikeresen befejezve!';
+  } else {
+    // uj_ugyfel és egyéb → program_vege sablon (általános)
+    templateId  = 'template_e1sg0pb';
+    extraSzoveg = tipas === 'uj_ugyfel'
+      ? '🆕 Új regisztráció — kérlek vedd fel a kapcsolatot!'
+      : JSON.stringify(extraAdat);
+  }
 
   try {
     await window.emailjs.send(
       EMAILJS_CONFIG.serviceId,
       templateId,
       {
-        konzultans_email: konzultansEmail || 'eva@erthetobbegeszseg.hu',
+        konzultans_email: konzultansEmail || 'szeplabieva@gmail.com',
         ugyfel_nev:       ugyfelNev || '',
         ugyfel_email:     ugyfelEmail || '',
         program_nev:      PROG_NEV[program] || program || '',
         datum:            new Date().toLocaleDateString('hu-HU'),
-        extra:            JSON.stringify(extraAdat),
+        extra:            extraSzoveg,
+        name:             'Érthetőbb Egészség rendszer',
+        email:            'noreply@erthetobbegeszseg.hu',
       }
     );
-    console.log('Email elküldve:', tipas);
+    console.log('✅ Email elküldve:', tipas, '→', templateId);
   } catch(e) {
-    console.log('Email hiba:', e);
+    console.log('❌ Email hiba:', e);
   }
 }
 
