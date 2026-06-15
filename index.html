@@ -2843,6 +2843,17 @@ const DEMO_FELHASZANALOK = {
 
 let bejelentkezettUser = null;
 
+const AT = {
+  base:   'app29gg3EPS9OYY5O',
+  token:  localStorage.getItem('at_token') || '',
+  url:    id => `https://api.airtable.com/v0/app29gg3EPS9OYY5O/${id}`,
+  headers: () => ({
+    'Authorization': 'Bearer ' + AT.token,
+    'Content-Type':  'application/json',
+  }),
+  aktiv: () => AT.token.length > 10,
+};
+
 // ── Belépés gomb ──
 
 // ── Demo belépők ──
@@ -3305,7 +3316,7 @@ function ugyfelFoOldalFrissit() {
   setTimeout(pontNapi, 2000); // Napi belépési pont
 
   // AT frissítés — minden belépésnél szinkronizálunk
-  if (AT.aktiv() && bejelentkezettUser?.atRecordId) {
+  if (typeof AT !== 'undefined' && (typeof AT !== 'undefined' && AT.aktiv()) && bejelentkezettUser?.atRecordId) {
     setTimeout(atUserFrissit, 3000);
   }
   // Push értesítés kérés (első belépésnél)
@@ -5864,7 +5875,7 @@ function naploPontHozzaad() {
 
 async function atUserFrissit() {
   const u = bejelentkezettUser;
-  if (!u || !AT.aktiv()) return;
+  if (!u || !(typeof AT !== 'undefined' && AT.aktiv())) return;
   try {
     const rec = await atGet('felhasznalok', `{Email}="${u.email}"`);
     if (rec.length > 0) {
@@ -5905,11 +5916,13 @@ function atTokenBeallitas(token) {
       const u = JSON.parse(mentett);
       if (u && u.email && u.szerep) {
         bejelentkezettUser = u;
-        // AT token frissítése ha van
-        if (AT.aktiv()) {
-          setTimeout(() => atUserFrissit(), 500);
-        }
         navSzerep(u.szerep);
+        // AT token frissítése — késleltetve hogy AT már inicializált legyen
+        setTimeout(() => {
+          if (typeof AT !== 'undefined' && AT.aktiv()) {
+            atUserFrissit();
+          }
+        }, 1000);
       }
     } catch(e) {
       localStorage.removeItem('bejelentkezve');
@@ -6262,7 +6275,7 @@ async function hetLepteto() {
     bejelentkezettUser.het = szamitottHet;
 
     // AT frissítés
-    if (AT.aktiv() && u.atRecordId) {
+    if ((typeof AT !== 'undefined' && AT.aktiv()) && u.atRecordId) {
       await atPatch('felhasznalok', u.atRecordId, { 'Hét': szamitottHet });
       console.log(`Hét frissítve: ${regiHet} → ${szamitottHet}`);
     }
@@ -6297,17 +6310,6 @@ async function hetLepteto() {
 // ══════════════════════════════════════
 // 🗄️ AIRTABLE BEKÖTÉS
 // ══════════════════════════════════════
-const AT = {
-  base:   'app29gg3EPS9OYY5O',
-  token:  localStorage.getItem('at_token') || '',
-  url:    id => `https://api.airtable.com/v0/app29gg3EPS9OYY5O/${id}`,
-  headers: () => ({
-    'Authorization': 'Bearer ' + AT.token,
-    'Content-Type':  'application/json',
-  }),
-  aktiv: () => AT.token.length > 10,
-};
-
 // Táblák nevei (az Airtable-ben így kell elnevezni)
 const AT_TABLAK = {
   felhasznalok: 'Felhasználók',
@@ -6404,7 +6406,7 @@ async function belepGomb() {
   if (hibaEl) hibaEl.style.display = 'none';
 
   // ── 1. AIRTABLE belépés (ha van token) ──
-  if (AT.aktiv()) {
+  if (typeof AT !== 'undefined' && AT.aktiv()) {
     try {
       const rec = await atGet('felhasznalok', `AND({Email}="${email}",{Jelszó}="${jelszo}")`);
       if (rec.length > 0) {
@@ -6445,7 +6447,7 @@ async function belepGomb() {
 
   // ── 3. Hibás belépés ──
   if (hibaEl) {
-    hibaEl.textContent = AT.aktiv()
+    hibaEl.textContent = (typeof AT !== 'undefined' && AT.aktiv())
       ? '❌ Hibás email vagy jelszó. Próbáld újra! Kérd az adminisztrátort ha elfelejtetted!'
       : '❌ Hibás email vagy jelszó. Próbáld újra!';
     hibaEl.style.display = 'block';
@@ -6494,7 +6496,7 @@ async function naplóMent() {
 
   toast('💾 Napló mentése...', 'z');
 
-  if (AT.aktiv()) {
+  if ((typeof AT !== 'undefined' && AT.aktiv())) {
     // Megnézzük van-e már mai bejegyzés
     const meglevo = await atGet('naplok',
       `AND({Ügyfél Email}="${u.email}", {Dátum}="${ma}")`);
@@ -6517,7 +6519,7 @@ async function naplóMent() {
 // ══════════════════════════════════════
 async function szokasokAtMent() {
   const u = bejelentkezettUser;
-  if (!u || !AT.aktiv()) return;
+  if (!u || !(typeof AT !== 'undefined' && AT.aktiv())) return;
 
   const ma = new Date().toISOString().split('T')[0];
   const prog = u.program || 'eletmod';
@@ -6549,7 +6551,7 @@ async function szokasokAtMent() {
 // ══════════════════════════════════════
 async function meresMent(suly, derek, csipo, mell) {
   const u = bejelentkezettUser;
-  if (!u || !AT.aktiv()) return;
+  if (!u || !(typeof AT !== 'undefined' && AT.aktiv())) return;
 
   const ma = new Date().toISOString().split('T')[0];
   await atPost('meresek', {
@@ -6569,7 +6571,7 @@ async function meresMent(suly, derek, csipo, mell) {
 // ══════════════════════════════════════
 async function konzAdatMentAT(het, adatok) {
   const u = bejelentkezettUser;
-  if (!u || !AT.aktiv()) return;
+  if (!u || !(typeof AT !== 'undefined' && AT.aktiv())) return;
 
   const mezok = {
     'Konzultáns Email': u.email,
@@ -6594,7 +6596,7 @@ async function konzAdatMentAT(het, adatok) {
 // 📝 ÚJ ÜGYFÉL REGISZTRÁCIÓ
 // ══════════════════════════════════════
 async function ujUgyfelMentAT(adatok) {
-  if (!AT.aktiv()) return true; // demo módban mindig OK
+  if (typeof AT === 'undefined' || !(typeof AT !== 'undefined' && AT.aktiv())) return true; // demo módban mindig OK
 
   // Ellenőrzés: van-e már ilyen email
   const meglevo = await atGet('felhasznalok', `{Email}="${adatok.email}"`);
@@ -6879,7 +6881,7 @@ function konzKiemelKuld(ugyfelNev, szoveg) {
   localStorage.setItem(kulcs, JSON.stringify(uzenet));
 
   // Valódi implementációban: AT-ba menti, az ügyfél látja belépéskor
-  if (AT.aktiv()) {
+  if ((typeof AT !== 'undefined' && AT.aktiv())) {
     atPost('felhasznalok', {
       'Konzultáns üzenet': szoveg.trim(),
       'Konzultáns üzenet dátuma': new Date().toISOString(),
@@ -6896,7 +6898,7 @@ function konzKiemelKuld(ugyfelNev, szoveg) {
 // ── Ügyfél belépésekor ellenőrzi van-e új konzultáns üzenet ──
 function konzKiemelBetoltAT() {
   const u = bejelentkezettUser;
-  if (!u || u.szerep !== 'ugyfel' || !AT.aktiv()) {
+  if (!u || u.szerep !== 'ugyfel' || !(typeof AT !== 'undefined' && AT.aktiv())) {
     konzKiemelBetolt();
     return;
   }
@@ -7653,7 +7655,7 @@ function szoptatasRogzit() {
   toast('✅ Szoptatás rögzítve! 🤱', 'z');
   szoptatasBetolt();
   // AT szinkron
-  if (AT.aktiv()) {
+  if ((typeof AT !== 'undefined' && AT.aktiv())) {
     atPost('naplok', {
       'Ügyfél Email': bejelentkezettUser?.email,
       'Dátum': new Date().toISOString().split('T')[0],
@@ -7853,7 +7855,7 @@ function bluesKikuldErtekeles() {
 
   // Konzultáns értesítés ha magas pontszám
   if (ossz >= 13) {
-    if (AT.aktiv()) {
+    if ((typeof AT !== 'undefined' && AT.aktiv())) {
       atPost('felhasznalok', {
         'Email': u.email,
         'Blues pontszám': ossz,
@@ -9402,7 +9404,7 @@ function npsValaszt(ertek) {
 function zarasKuld() {
   const szoveg = document.getElementById('zaras-visszajelzes')?.value?.trim();
   const u = bejelentkezettUser || {};
-  if (AT.aktiv()) {
+  if ((typeof AT !== 'undefined' && AT.aktiv())) {
     atPost('felhasznalok', {
       'Email': u.email,
       'NPS pontszám': npsErtek,
@@ -9528,7 +9530,7 @@ async function atDashboardBetolt() {
     </div>`;
 
   // Ha nincs AT token — demo módban mutatjuk
-  if (!AT.aktiv()) {
+  if (!(typeof AT !== 'undefined' && AT.aktiv())) {
     atDashboardDemoRender(el);
     return;
   }
@@ -10667,7 +10669,7 @@ function chatElozmenytMent(kerdés, valasz, ki) {
     localStorage.setItem(kulcs, JSON.stringify(meglevo));
 
     // AT-ba is mentjük ha van token
-    if (AT.aktiv()) {
+    if ((typeof AT !== 'undefined' && AT.aktiv())) {
       atPost('naplok', {
         'Ügyfél Email': u.email,
         'Ügyfél Név': u.nev || '',
@@ -11993,7 +11995,7 @@ function kerdoivValaszMent(id, ertek) {
   localStorage.setItem('kerdoiv_' + aktualisKerdoivAdatok.ugyfelNev,
     JSON.stringify(aktualisKerdoivAdatok.valaszok));
   // AT-ba is ha van token
-  if (AT.aktiv()) {
+  if ((typeof AT !== 'undefined' && AT.aktiv())) {
     // Debouncolt mentés
     clearTimeout(window._kv_timer);
     window._kv_timer = setTimeout(() => {
