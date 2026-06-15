@@ -471,7 +471,7 @@ button{cursor:pointer;font-family:inherit;border:none;background:none}
           <div class="fo-btn-ikon" style="background:var(--lila-v);font-size:26px">🧠</div>
           <div class="fo-btn-szoveg">
             <div class="fo-btn-cim" style="color:var(--lila)">Heti kvíz</div>
-            <div class="fo-btn-al">Teszteld a tudásod · 3 kérdés</div>
+            <div class="fo-btn-al">Teszteld a tudásodatat · 3 kérdés</div>
           </div>
           <span id="kviz-badge" style="position:absolute;top:10px;right:12px;background:var(--lila);
             color:white;font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;
@@ -720,6 +720,25 @@ button{cursor:pointer;font-family:inherit;border:none;background:none}
 <!-- ════════════════════════════════════
      🤝 KONZULTÁNS PORTÁL
 ════════════════════════════════════ -->
+
+<!-- ════════════════════════════════════
+     📊 AIRTABLE DASHBOARD — ÉVÁNAK
+════════════════════════════════════ -->
+<div class="oldal" id="o-at-dashboard">
+  <div class="fejlec">
+    <button class="vissza-btn" onclick="vissza()">← Vissza</button>
+    <span class="fejlec-cim">📊 Dashboard</span>
+    <button onclick="atDashboardBetolt()" 
+      style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px 8px">🔄</button>
+  </div>
+  <div class="tartalom" id="at-dashboard-tartalom">
+    <div style="text-align:center;padding:40px 20px;color:var(--s400)">
+      <div style="font-size:32px;margin-bottom:12px">⏳</div>
+      <div style="font-size:14px">Dashboard betöltése...</div>
+    </div>
+  </div>
+</div>
+
 <div class="oldal" id="o-konzultans">
 
   <div class="szint-jelzo">
@@ -735,7 +754,7 @@ button{cursor:pointer;font-family:inherit;border:none;background:none}
   <div class="k-hero">
     <div style="display:flex;align-items:center;justify-content:space-between">
       <div>
-        <div style="font-size:20px;font-weight:800;color:white">Jó napot! 🤝</div>
+        <div style="font-size:20px;font-weight:800;color:white">Sziasztok! 🤝</div>
         <div style="font-size:13px;color:rgba(255,255,255,.75);margin-top:2px">Konzultáns portál</div>
       </div>
       <button onclick="oldal('o-ki-vagy')" style="background:rgba(255,255,255,.15);border:none;color:white;padding:7px 13px;border-radius:9px;font-size:12px;font-weight:600;cursor:pointer">Kilépés</button>
@@ -3178,7 +3197,7 @@ function regBelep() {
   bejelentkezettUser = { ...DEMO_FELHASZANALOK[regAdatok.email], email: regAdatok.email };
   ugyfelPortalBetolt();
   oldal('o-ugyfel');
-  toast('🎉 Üdvözlünk a rendszerben, ' + regAdatok.nev.split(' ')[1] + '!', 'z');
+  toast('🎉 Üdv a rendszerben, ' + regAdatok.nev.split(' ')[1] + '!', 'z');
 }
 
 // ══ ÁLLAPOT ══
@@ -3205,6 +3224,7 @@ function oldal(id) {
   if (id === 'o-haladás-reszletek') setTimeout(sulyTablazatRender, 80);
   if (id === 'o-ugyfel-dashboard')  setTimeout(() => { dashSulyDiagram(); dashCmSavok(); dashKerdoivOssz(); dashKonzultacioOssz(); }, 100);
   if (id === 'o-konzultans')        setTimeout(konzListaFrissit, 60);
+  if (id === 'o-at-dashboard')      setTimeout(atDashboardBetolt, 80);
   if (id === 'o-ugyfel')            setTimeout(ugyfelFoOldalFrissit, 60);
   if (id === 'o-chat')              setTimeout(chatBetolt, 60);
   // ── Korábban hiányzó hook-ok ──
@@ -3308,7 +3328,7 @@ function pushKerdes() {
     <div style="display:flex;gap:8px">
       <button onclick="pushAktival();this.closest('[style*=fixed]').remove()"
         style="flex:1;padding:10px;border-radius:9px;background:var(--kek);color:white;border:none;font-size:13px;font-weight:700;cursor:pointer">
-        Igen, kérem! 💙
+        Igen, szeretném! 💙
       </button>
       <button onclick="this.closest('[style*=fixed]').remove()"
         style="flex:1;padding:10px;border-radius:9px;background:var(--s100);color:var(--s600);border:none;font-size:13px;cursor:pointer">
@@ -6375,7 +6395,7 @@ async function belepGomb() {
   const hibaEl = document.getElementById('belep-hiba');
 
   if (!email || !jelszo) {
-    if (hibaEl) { hibaEl.textContent = '⚠️ Add meg az email címed és jelszavad!'; hibaEl.style.display = 'block'; }
+    if (hibaEl) { hibaEl.textContent = '⚠️ Add meg az email címedet és jelszavadat!'; hibaEl.style.display = 'block'; }
     return;
   }
 
@@ -6426,8 +6446,8 @@ async function belepGomb() {
   // ── 3. Hibás belépés ──
   if (hibaEl) {
     hibaEl.textContent = AT.aktiv()
-      ? '❌ Hibás email vagy jelszó. Kérd az adminisztrátort ha elfelejtetted!'
-      : '❌ Hibás email vagy jelszó.';
+      ? '❌ Hibás email vagy jelszó. Próbáld újra! Kérd az adminisztrátort ha elfelejtetted!'
+      : '❌ Hibás email vagy jelszó. Próbáld újra!';
     hibaEl.style.display = 'block';
   }
   if (btn) { btn.textContent = 'Belépés →'; btn.disabled = false; }
@@ -9487,6 +9507,301 @@ function profilBetolt() {
 }
 
 // ══ KONZULTÁNS LISTA FRISSÍTÉS ══
+
+// ══════════════════════════════════════
+// 📊 AIRTABLE DASHBOARD — ÉVÁNAK
+// ══════════════════════════════════════
+
+function atDashboardMegnyit() {
+  oldal('o-at-dashboard');
+}
+
+async function atDashboardBetolt() {
+  const el = document.getElementById('at-dashboard-tartalom');
+  if (!el) return;
+
+  // Betöltés jelzés
+  el.innerHTML = `
+    <div style="text-align:center;padding:40px 20px;color:var(--s400)">
+      <div style="font-size:32px;margin-bottom:12px;animation:pulse 1s infinite">⏳</div>
+      <div style="font-size:14px">Adatok betöltése az Airtable-ből...</div>
+    </div>`;
+
+  // Ha nincs AT token — demo módban mutatjuk
+  if (!AT.aktiv()) {
+    atDashboardDemoRender(el);
+    return;
+  }
+
+  try {
+    // AT-ból betöltjük az összes ügyfelet
+    const felhasznalok = await atGet('felhasznalok', "OR({Szerep}='ugyfel',{Szerep}='Ügyfél')", 200);
+    const naplok       = await atGet('naplok', '', 200);
+    atDashboardRender(el, felhasznalok, naplok);
+  } catch(e) {
+    console.error('Dashboard hiba:', e);
+    atDashboardDemoRender(el);
+  }
+}
+
+function atDashboardRender(el, felhasznalok, naplok) {
+  const ma = new Date();
+  const maStr = ma.toLocaleDateString('hu-HU');
+
+  // ── Adatok feldolgozása ──
+  const ugyfelek = felhasznalok.map(r => ({
+    id:          r.id,
+    nev:         r.fields['Név'] || '—',
+    email:       r.fields['Email'] || '',
+    program:     (r.fields['Program'] || 'eletmod').toLowerCase(),
+    het:         parseInt(r.fields['Hét'] || 1),
+    hf:          parseInt(r.fields['HF%'] || 0),
+    konzultans:  r.fields['Konzultáns ID'] || 'eva',
+    kerdoiv:     r.fields['Kérdőív adatok'] ? true : false,
+  }));
+
+  const aktiv    = ugyfelek.filter(u => u.het <= 12);
+  const maxHetek = { eletmod:12, 'gyerekágy':12, elotte:8, alatt:8 };
+
+  // Figyelmet igénylők: utolsó héten van, kérdőív hiányzik, stb.
+  const figyelem = ugyfelek.filter(u => {
+    const max = maxHetek[u.program] || 12;
+    return u.het >= max - 1 || !u.kerdoiv || u.hf < 50;
+  });
+
+  // Programok szerint csoportosítás
+  const progCsop = {};
+  ugyfelek.forEach(u => {
+    if (!progCsop[u.program]) progCsop[u.program] = [];
+    progCsop[u.program].push(u);
+  });
+
+  const PROG = {
+    eletmod:    { nev:'Életmódváltás', emoji:'🌿', szin:'var(--zold)',   bg:'var(--zold-v)' },
+    elotte:     { nev:'Várandósság előtt', emoji:'🌸', szin:'var(--rozsa)', bg:'var(--rozsa-v)' },
+    alatt:      { nev:'Várandósság alatt', emoji:'🤰', szin:'var(--lila)',  bg:'var(--lila-v)' },
+    'gyerekágy':{ nev:'Gyerekágy', emoji:'👶', szin:'var(--narancs)', bg:'var(--narancs-v)' },
+  };
+
+  // Naplók ma
+  const maiNaplok = naplok.filter(n => {
+    const d = n.fields['Dátum'] || '';
+    return d === ma.toISOString().split('T')[0];
+  });
+
+  let html = `
+
+    <!-- ── ÖSSZESÍTŐ STAT KÁRTYÁK ── -->
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px">
+
+      <div style="background:linear-gradient(135deg,var(--kek),#1d4ed8);border-radius:var(--r);
+        padding:16px;color:white">
+        <div style="font-size:36px;font-weight:900">${aktiv.length}</div>
+        <div style="font-size:12px;opacity:.85;margin-top:2px">aktív ügyfél</div>
+      </div>
+
+      <div style="background:linear-gradient(135deg,${figyelem.length>0?'var(--piros)':'var(--zold)'},${figyelem.length>0?'#b91c1c':'#15803d'});
+        border-radius:var(--r);padding:16px;color:white">
+        <div style="font-size:36px;font-weight:900">${figyelem.length}</div>
+        <div style="font-size:12px;opacity:.85;margin-top:2px">${figyelem.length>0?'⚠️ figyelmet igényel':'✅ minden rendben'}</div>
+      </div>
+
+      <div style="background:linear-gradient(135deg,var(--lila),#7c3aed);border-radius:var(--r);
+        padding:16px;color:white">
+        <div style="font-size:36px;font-weight:900">${ugyfelek.filter(u=>u.kerdoiv).length}</div>
+        <div style="font-size:12px;opacity:.85;margin-top:2px">kérdőív kitöltve</div>
+      </div>
+
+      <div style="background:linear-gradient(135deg,var(--narancs),#c2410c);border-radius:var(--r);
+        padding:16px;color:white">
+        <div style="font-size:36px;font-weight:900">${maiNaplok.length}</div>
+        <div style="font-size:12px;opacity:.85;margin-top:2px">mai napló bejegyzés</div>
+      </div>
+
+    </div>
+
+    <!-- ── FIGYELMEZTETÉSEK ── -->
+    ${figyelem.length > 0 ? `
+    <div style="background:#fef2f2;border:1.5px solid #fecaca;border-radius:var(--r);
+      padding:14px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:800;color:#991b1b;margin-bottom:10px">
+        ⚠️ Figyelmet igényel (${figyelem.length} ügyfél)
+      </div>
+      ${figyelem.map(u => {
+        const max = maxHetek[u.program] || 12;
+        const okok = [];
+        if (u.het >= max - 1) okok.push('🏁 Program vége közeleg');
+        if (!u.kerdoiv) okok.push('📋 Kérdőív hiányzik');
+        if (u.hf < 50) okok.push('📉 Alacsony HF%');
+        return `<div style="display:flex;justify-content:space-between;align-items:center;
+          padding:8px 0;border-bottom:1px solid #fee2e2">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--s900)">${u.nev}</div>
+            <div style="font-size:11px;color:#dc2626">${okok.join(' · ')}</div>
+          </div>
+          <button onclick="ugyfelDashMegnyit('${u.nev}')"
+            style="font-size:11px;padding:5px 10px;border-radius:8px;
+            border:1px solid #fca5a5;background:white;color:#dc2626;cursor:pointer">
+            Megnyit →
+          </button>
+        </div>`;
+      }).join('')}
+    </div>` : ''}
+
+    <!-- ── PROGRAMOK SZERINT ── -->
+    <div style="font-size:13px;font-weight:800;color:var(--s900);margin-bottom:10px">
+      👥 Ügyfelek programonként
+    </div>
+
+    ${Object.entries(PROG).map(([prog, info]) => {
+      const csoport = progCsop[prog] || [];
+      if (csoport.length === 0) return '';
+      const max = maxHetek[prog] || 12;
+      const atlag_hf = csoport.length > 0
+        ? Math.round(csoport.reduce((s,u) => s + u.hf, 0) / csoport.length)
+        : 0;
+
+      return `
+        <div style="border:1.5px solid ${info.szin}44;border-radius:var(--r);
+          margin-bottom:10px;overflow:hidden">
+
+          <!-- Szekció fejléc -->
+          <div style="background:${info.bg};padding:10px 14px;
+            display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:20px">${info.emoji}</span>
+              <div>
+                <div style="font-size:13px;font-weight:800;color:${info.szin}">${info.nev}</div>
+                <div style="font-size:11px;color:var(--s500)">${csoport.length} ügyfél · átlag HF: ${atlag_hf}%</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ügyfél sorok -->
+          ${csoport.sort((a,b) => b.het - a.het).map(u => {
+            const pct = Math.round(u.het / max * 100);
+            const hetSzin = u.het >= max - 1 ? 'var(--piros)' : u.het >= max * 0.5 ? 'var(--narancs)' : info.szin;
+            return `
+              <div style="padding:12px 14px;border-bottom:1px solid ${info.szin}22;
+                display:flex;align-items:center;gap:12px;cursor:pointer"
+                onclick="ugyfelDashMegnyit('${u.nev}')">
+
+                <!-- Avatar -->
+                <div style="width:36px;height:36px;border-radius:50%;
+                  background:${info.szin};color:white;font-size:14px;font-weight:800;
+                  display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                  ${u.nev[0]}
+                </div>
+
+                <!-- Adatok -->
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                    <div style="font-size:13px;font-weight:700;color:var(--s900);
+                      white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.nev}</div>
+                    <div style="font-size:11px;font-weight:800;color:${hetSzin};flex-shrink:0;margin-left:8px">
+                      ${u.het}/${max} hét
+                    </div>
+                  </div>
+
+                  <!-- Progress bar -->
+                  <div style="background:var(--s200);border-radius:999px;height:4px;margin-bottom:4px">
+                    <div style="width:${pct}%;height:100%;background:${hetSzin};
+                      border-radius:999px;transition:width .5s"></div>
+                  </div>
+
+                  <!-- Meta -->
+                  <div style="display:flex;gap:8px;align-items:center">
+                    <span style="font-size:10px;color:var(--s400)">HF: ${u.hf}%</span>
+                    <span style="font-size:10px;color:${u.kerdoiv?'var(--zold)':'var(--piros)'}">
+                      ${u.kerdoiv ? '✅ kérdőív' : '❌ kérdőív hiányzik'}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Nyíl -->
+                <span style="color:var(--s300);font-size:18px;flex-shrink:0">›</span>
+              </div>`;
+          }).join('')}
+        </div>`;
+    }).join('')}
+
+    <!-- ── MAI AKTIVITÁS ── -->
+    <div style="font-size:13px;font-weight:800;color:var(--s900);margin:16px 0 10px">
+      📝 Mai aktivitás
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
+      <div class="k kp" style="text-align:center">
+        <div style="font-size:22px;font-weight:900;color:var(--kek)">${maiNaplok.length}</div>
+        <div style="font-size:10px;color:var(--s500)">napló ma</div>
+      </div>
+      <div class="k kp" style="text-align:center">
+        <div style="font-size:22px;font-weight:900;color:var(--zold)">
+          ${ugyfelek.filter(u=>u.het<=12).length}
+        </div>
+        <div style="font-size:10px;color:var(--s500)">aktív program</div>
+      </div>
+      <div class="k kp" style="text-align:center">
+        <div style="font-size:22px;font-weight:900;color:var(--narancs)">
+          ${ugyfelek.filter(u=>!u.kerdoiv).length}
+        </div>
+        <div style="font-size:10px;color:var(--s500)">kérdőív hiányzik</div>
+      </div>
+    </div>
+
+    <!-- ── GYORS MŰVELETEK ── -->
+    <div style="font-size:13px;font-weight:800;color:var(--s900);margin-bottom:10px">
+      ⚡ Gyors műveletek
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
+      <button onclick="oldal('o-ugyfel-lista')" class="gomb g-kek">
+        <span>👥 Összes ügyfél listája</span><span>›</span>
+      </button>
+      <button onclick="atDashboardBetolt()" 
+        style="padding:13px 16px;border-radius:12px;border:1.5px solid var(--s200);
+        background:white;font-size:14px;font-weight:700;cursor:pointer;
+        display:flex;justify-content:space-between;align-items:center">
+        <span>🔄 Dashboard frissítése</span><span style="color:var(--s400)">›</span>
+      </button>
+    </div>
+
+    <div style="text-align:center;font-size:11px;color:var(--s400);margin-bottom:16px">
+      Utolsó frissítés: ${maStr} · Adatok forrása: Airtable
+    </div>
+  `;
+
+  el.innerHTML = html;
+}
+
+function atDashboardDemoRender(el) {
+  // Demo mód — szimulált adatokkal
+  const demoUgyfelek = Object.entries(DEMO_FELHASZANALOK)
+    .filter(([e, u]) => u.szerep === 'ugyfel')
+    .map(([email, u]) => ({
+      nev: u.nev, email, program: u.program, het: u.het,
+      hf: u.hf || 80, kerdoiv: Math.random() > 0.5,
+    }));
+
+  const demoNaplok = [];
+  atDashboardRender(el,
+    demoUgyfelek.map((u, i) => ({ id: 'demo'+i, fields: {
+      'Név': u.nev, 'Email': u.email, 'Program': u.program,
+      'Hét': u.het, 'HF%': u.hf,
+      'Kérdőív adatok': u.kerdoiv ? '{}' : null,
+    }})),
+    demoNaplok
+  );
+
+  // Demo badge
+  const el2 = document.getElementById('at-dashboard-tartalom');
+  if (el2) {
+    const badge = document.createElement('div');
+    badge.style.cssText = 'background:#fefce8;border:1px solid #fde047;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#713f12;text-align:center';
+    badge.textContent = '⚠️ Demo mód — valódi adatokhoz add meg az Airtable tokent';
+    el2.insertBefore(badge, el2.firstChild);
+  }
+}
+
 function konzListaFrissit() {
   const u = bejelentkezettUser;
   if (!u || u.szerep !== 'konzultans') return;
@@ -9569,43 +9884,203 @@ function konzKilep() {
 let chatUzenetek = [];
 let chatTortenet = [];
 
+// ══════════════════════════════════════
+// 🧠 SZEMÉLYRE SZABOTT AI — Ügyfél profil összegyűjtő
+// ══════════════════════════════════════
+
+function ugyfélProfilOsszegyujt() {
+  const u = bejelentkezettUser || {};
+  const prog = u.program || 'eletmod';
+  const het  = u.het || 1;
+
+  // 1. KÉRDŐÍV ADATOK
+  const kerdoivRaw = localStorage.getItem('kerdoiv_' + u.nev);
+  const kerdoiv = kerdoivRaw ? JSON.parse(kerdoivRaw) : {};
+
+  // 2. MÉRÉSEK — legutóbbi
+  const meresekRaw = localStorage.getItem('meresek_' + u.email);
+  const meresek = meresekRaw ? JSON.parse(meresekRaw) : {};
+  const utolsoMeres = Array.isArray(meresek) && meresek.length > 0
+    ? meresek[meresek.length - 1] : (meresek || {});
+
+  // 3. NAPLÓK — utolsó 3 nap
+  const naplo3Raw = localStorage.getItem('naplo_' + u.email);
+  const naplo3 = naplo3Raw ? JSON.parse(naplo3Raw).slice(-3) : [];
+
+  // 4. SZOKÁSOK — mai állapot
+  const szokasRaw = localStorage.getItem('szokasok_' + (u.email || 'demo'));
+  const szokasok = szokasRaw ? JSON.parse(szokasRaw) : {};
+
+  // 5. PONTOK
+  const pontok = JSON.parse(localStorage.getItem('pont_adatok') || '{"osszes":0}');
+
+  // ── Profil összeállítása ──
+  const profil = {
+    nev:     u.nev || 'ismeretlen',
+    program: prog,
+    het:     het,
+    // Kérdőív kulcsadatok
+    magassag:   kerdoiv.magassag || kerdoiv.suly && null,
+    suly:       kerdoiv.suly || kerdoiv.suly_most || null,
+    betegsegek: Array.isArray(kerdoiv.betegsegek) ? kerdoiv.betegsegek.filter(b => b !== 'Egyik sem') : [],
+    hormon_tunet: Array.isArray(kerdoiv.hormon_tunet) ? kerdoiv.hormon_tunet.filter(t => t !== 'Egyik sem') : [],
+    vcukor_tunet: Array.isArray(kerdoiv.vcukor_tunet) ? kerdoiv.vcukor_tunet.filter(t => t !== 'Egyiket sem') : [],
+    emesztes:   Array.isArray(kerdoiv.emesztes) ? kerdoiv.emesztes.filter(e => e !== 'Egyiket sem') : [],
+    stressz:    kerdoiv.stressz_szint || null,
+    alvas_ora:  kerdoiv.alvas_ora || null,
+    mozgas:     kerdoiv.mozgas_het || null,
+    cel:        kerdoiv.cel_3dolog || kerdoiv.fo_cel || null,
+    miert:      kerdoiv.miert_program || kerdoiv.miert_jelent || kerdoiv.miert || null,
+    // Program-specifikus
+    szoptat:    kerdoiv.szoptat || null,
+    hanyadik_het: kerdoiv.hanyadik_het || null,
+    baba_kor:   kerdoiv.baba_kor || null,
+    // Mérések
+    suly_most:  utolsoMeres.suly || utolsoMeres.testsuly || null,
+    suly_cel:   utolsoMeres.cel_suly || null,
+    // Pontok
+    pontok:     pontok.osszes || 0,
+  };
+
+  return profil;
+}
+
+function ugyfélProfilSzoveg(profil) {
+  const PROG_NEV = {
+    eletmod:    'Életmódváltás (12 hetes)',
+    elotte:     'Várandósság előtt (8 hetes)',
+    alatt:      'Várandósság alatt (8 hetes)',
+    'gyerekágy':'Gyerekágy időszak (12 hetes)',
+  };
+
+  let szoveg = `ÜGYFÉL NEVE: ${profil.nev}
+PROGRAM: ${PROG_NEV[profil.program] || profil.program}
+JELENLEGI HÉT: ${profil.het}. hét`;
+
+  if (profil.magassag || profil.suly || profil.suly_most) {
+    szoveg += `\nTESTADATOK:`;
+    if (profil.magassag) szoveg += ` Magasság: ${profil.magassag} cm`;
+    if (profil.suly || profil.suly_most) szoveg += ` | Súly: ${profil.suly_most || profil.suly} kg`;
+    if (profil.suly_cel) szoveg += ` | Cél súly: ${profil.suly_cel} kg`;
+  }
+
+  if (profil.betegsegek.length > 0) {
+    szoveg += `\nDIAGNOSZTIZÁLT ÁLLAPOTOK: ${profil.betegsegek.join(', ')}`;
+  }
+
+  if (profil.hormon_tunet.length > 0) {
+    szoveg += `\nHORMONÁLIS TÜNETEK: ${profil.hormon_tunet.join(', ')}`;
+  }
+
+  if (profil.vcukor_tunet.length > 0) {
+    szoveg += `\nVÉRCUKOR TÜNETEK: ${profil.vcukor_tunet.join(', ')}`;
+  }
+
+  if (profil.emesztes.length > 0) {
+    szoveg += `\nEMÉSZTÉSI PANASZOK: ${profil.emesztes.join(', ')}`;
+  }
+
+  if (profil.stressz) szoveg += `\nSTRESSZSZINT: ${profil.stressz}/10`;
+  if (profil.alvas_ora) szoveg += ` | ALVÁS: ${profil.alvas_ora} óra/éjszaka`;
+  if (profil.mozgas) szoveg += ` | MOZGÁS: ${profil.mozgas}`;
+
+  // Program-specifikus
+  if (profil.program === 'alatt' && profil.hanyadik_het) {
+    szoveg += `\nTERHESSÉG: ${profil.hanyadik_het}. terhességi hétben jár`;
+  }
+  if (profil.program === 'gyerekágy' && profil.baba_kor) {
+    szoveg += `\nBABA KORA: ${profil.baba_kor}`;
+  }
+  if (profil.program === 'gyerekágy' && profil.szoptat) {
+    szoveg += ` | SZOPTATÁS: ${profil.szoptat}`;
+  }
+
+  if (profil.cel) szoveg += `\nCÉLJAI: ${profil.cel}`;
+  if (profil.miert) szoveg += `\nMIÉRT JELENTKEZETT: ${profil.miert}`;
+  if (profil.pontok > 0) szoveg += `\nPROGRAM PONTJAI: ${profil.pontok} pont`;
+
+  return szoveg;
+}
+
 const EVA_RENDSZER_UZENET = () => {
   const u = bejelentkezettUser || {};
   const prog = u.program || 'eletmod';
   const het  = u.het || 1;
-  const PROG_NEV = {eletmod:'Életmódváltás (12 hetes)',elotte:'Várandósság előtt (8 hetes)',alatt:'Várandósság alatt (8 hetes)',gyerekágy:'Gyerekágy időszak (12 hetes)'};
-  return `Te Széplábi Éva vagy az Érthetőbb Egészség fő konzultánsa és tulajdonosa.
+
+  // Személyre szabott profil összeállítása
+  const profil = ugyfélProfilOsszegyujt();
+  const profilSzoveg = ugyfélProfilSzoveg(profil);
+
+  // Legutóbbi napló adatok
+  const naplo3Raw = localStorage.getItem('naplo_' + u.email);
+  const naplo3 = naplo3Raw ? JSON.parse(naplo3Raw).slice(-3) : [];
+  const naploSzoveg = naplo3.length > 0
+    ? '\n\nLEGUTÓBBI NAPLÓ BEJEGYZÉSEK:\n' + naplo3.map(n =>
+        `${n.datum || ''}: Hangulat: ${n.hangulat || '—'}, Energia: ${n.energia || '—'}, Víz: ${n.viz || '—'} pohár${n.etel ? ', Ételek: ' + n.etel : ''}`
+      ).join('\n')
+    : '';
+
+  // Heti lecke kontextus
+  const hetiTemak = HETI_TEMAK[prog] || HETI_TEMAK.eletmod;
+  const aktualisLecke = hetiTemak[het] || null;
+  const leckeSzoveg = aktualisLecke
+    ? `\n\nEZEN A HÉTEN TANULJA: "${aktualisLecke.cim}" — ${aktualisLecke.tema}`
+    : '';
+
+  return `Te Széplábi Éva vagy, az Érthetőbb Egészség konzultánsa és tulajdonosa.
+Szülésznőként is dolgoztál, ezért a várandóssági és gyerekágy témákban különösen mélyreható tudásod van.
 Személyes stílusod: meleg, közvetlen, biztató. Úgy beszélsz mint egy jó barát aki egyben szakértő. Nem vagy robot.
 
-ELVEID (soha ne szegd meg):
+══════════════════════════════════
+SZEMÉLYRE SZABOTT ÜGYFÉL PROFIL
+══════════════════════════════════
+${profilSzoveg}${naploSzoveg}${leckeSzoveg}
+
+══════════════════════════════════
+HOGYAN HASZNÁLD A PROFILT
+══════════════════════════════════
+- Ha az ügyfélnek van diagnosztizált állapota (pl. inzulinrezisztencia, PCOS, pajzsmirigy) — MINDIG figyelembe veszed a válaszban
+- Ha tudsz a súlyáról, magasságáról — konkrét, személyre szabott javaslatokat adsz
+- Ha látod a tüneteit (fáradtság, puffadás stb.) — ezekre reagálsz proaktívan
+- Ha látod a céljait — azok felé irányítasz minden tanácsoddal
+- Ha látod az utolsó naplóbejegyzéseket — megemlítheted ("Látom tegnap keveset ittál...")
+- Ha nem töltötte ki a kérdőívet — bátran rákérdezhetsz egy-egy alapadatra
+
+══════════════════════════════════
+ELVEID (soha ne szegd meg)
+══════════════════════════════════
 - SOHA nem ajánlsz kenyeret, tésztát, rizst, gabonát, glutént, lisztet, müzlit, kekszet
 - SOHA nem ajánlsz kalória számolást, diétát, éhezést
 - SOHA nem ajánlsz margarint, növényi olajat (napraforgó, repce), szóját
 - Mindig ajánlhatsz: húst, halat, tojást, zöldséget, avokádót, diót, görög joghurtot, olívaolajt, vajat, kókuszzsírt
+- Komoly egészségügyi kérdésnél ajánld az orvost is, de te is adj hasznos információt
 
-KOMMUNIKÁCIÓ:
+══════════════════════════════════
+KOMMUNIKÁCIÓ
+══════════════════════════════════
 - Mindig magyarul válaszolj
-- Max 4-5 rövid mondat
+- MINDIG tegező módban szólj — "te", "neked", "nálad", soha nem "Ön" vagy "maga"
+- Max 4-6 rövid mondat — ne legyél túl hosszú
 - Természetes emojik (de ne túl sok)
-- Néha kérdezz vissza
-- Dicsérd a kis lépéseket is
-- Komoly egészségügyi kérdésnél: ajánld az orvost is
+- Néha kérdezz vissza személyesen ("Nálad mi a helyzet?", "Te hogy tapasztalod?")
+- Dicsérd a kis lépéseket is ("Szuper hogy megcsináltad!", "Ügyes vagy!")
+- NEM ORVOSI TANÁCS — de segítesz eligazodni
 
-ÜGYFÉL: ${u.nev || 'ismeretlen'} | Program: ${PROG_NEV[prog] || prog} | ${het}. hét`;
+FONTOS: Ez a chat NEM minősül orvosi tanácsnak. Táplálkozási tájékoztatást nyújtasz.`;
 };
 
 const EVA_UDVOZLO = {
-  eletmod:   'Szia! Éva vagyok, a konzultánsod. Gratulálok hogy elindultál az életmódváltáson! Bármit kérdezhetsz — étkezés, receptek, szokások — mind. Miben segíthetek ma? 💙',
-  elotte:    'Szia! Éva vagyok. Nagyon örülök hogy itt vagy — a várandósság előtti felkészülés az egyik legfontosabb dolog amit tehetsz! Miben segíthetek? 💙',
-  alatt:     'Szia kismama! Éva vagyok. Tudod hogy minden kérdéssel fordulhatsz hozzám — éjjel is, ha nem alszol. Mi jár most a fejedben? 💙',
-  gyerekágy: 'Szia! Éva vagyok. Először is — szuper anyuka vagy hogy még ezzel is foglalkozol! A gyerekágy nehéz, de együtt átvészeljük. Miben segíthetek? 💙',
+  eletmod:   'Szia! Éva vagyok, a konzultánsod. 🌿 Örülök hogy elindultál az életmódváltáson — ez az egyik legjobb döntés amit meghozhattál! Bármit kérdezhetsz tőlem — étkezés, receptek, szokások, tünetek. Miben segíthetek ma? 💙',
+  elotte:    'Szia! Éva vagyok. 🌸 Nagyon örülök hogy itt vagy — a babavárás előtti felkészülés az egyik legfontosabb befektetés amit tehetsz magadba és a leendő babádba! Mi jár most a fejedben? 💙',
+  alatt:     'Szia kismama! Éva vagyok. 🤰 Minden kérdéssel fordulhatsz hozzám — nappal és éjjel is, ha nem alszol. Valódi válaszokat kapsz, nem robotos szöveget. Mi jár most a fejedben? 💙',
+  gyerekágy: 'Szia! Éva vagyok. 👶 Először is — szuper anyuka vagy hogy a saját egészségeddel is foglalkozol! A gyerekágy időszak kihívásokkal teli, de együtt megoldjuk. Miben segíthetek ma? 💙',
 };
 
 const EVA_GYORS = {
-  eletmod:   ['Mit egyek reggelire?','Mennyi vizet igyak?','Milyen halakat ajánlasz?','Miért vagyok fáradt?'],
-  elotte:    ['Milyen vitamint szedjek?','Mit egyek a termékenységért?','Milyen vérvizsgálat kell?','Hogyan javítsam a ciklusomat?'],
-  alatt:     ['Mit egyek az 1. trimeszterben?','Mi segít a hányinger ellen?','Biztonságos a lazac?','Milyen vitamin kell?'],
-  gyerekágy: ['Mit egyek szoptatás alatt?','Hogyan legyen több energiám?','Hogyan kezeljem az alváshiányt?','Normális hogy így érzem magam?'],
+  eletmod:   ['Mit egyek reggelire?','Mennyi vizet igyak naponta?','Milyen halakat ajánlasz?','Miért vagyok annyira fáradt?'],
+  elotte:    ['Milyen vitamint szedjek most?','Mit egyek a termékenységért?','Milyen vérvizsgálat kell?','Hogyan legyen szabályosabb a ciklusom?'],
+  alatt:     ['Mit egyek az 1. trimeszterben?','Mi segít a hányinger ellen?','Biztonságos a lazac terhesen?','Milyen vitamint szedjek?'],
+  gyerekágy: ['Mit egyek szoptatás alatt?','Hogyan legyen több energiám?','Mit tegyek az alváshiány ellen?','Normális hogy így érzem magam?'],
 };
 
 
@@ -9968,10 +10443,10 @@ function chatJogiPopupMutat(kulcs) {
 
       <div style="background:#fefce8;border:1.5px solid #fde047;border-radius:12px;
         padding:16px;margin-bottom:18px;font-size:13px;color:#713f12;line-height:1.7">
-        <strong>Az Érthetőbb Egészség AI Coach az alábbi feltételekkel vehető igénybe:</strong><br><br>
-        1. Az AI Coach által nyújtott információk kizárólag <strong>általános táplálkozási tájékoztatást</strong> tartalmaznak, ismeretterjesztés céljából.<br><br>
-        2. A chat tartalma <strong>semmilyen körülmények között nem minősül orvosi tanácsnak</strong>, diagnózisnak, terápiás javaslatnak vagy egészségügyi szolgáltatásnak.<br><br>
-        3. <strong>Egészségügyi döntés meghozatala előtt</strong> minden esetben kérd ki kezelőorvosod, szakorvosd véleményét.<br><br>
+        <strong>Az AI Coach az alábbi feltételekkel használható:</strong><br><br>
+        1. Az AI Coach kizárólag <strong>általános táplálkozási tájékoztatást</strong> nyújt, ismeretterjesztés céljából.<br><br>
+        2. A chat tartalma <strong>NEM minősül orvosi tanácsnak</strong>, diagnózisnak vagy terápiás javaslatnak.<br><br>
+        3. <strong>Egészségügyi döntés előtt</strong> kérd ki kezelőorvosod, szakorvosd véleményét.<br><br>
         4. A konzultánsod a <strong>következő konzultáción átnézi a kérdéseidet</strong> és személyre szabott tanácsot ad.<br><br>
         5. A beszélgetések <strong>rögzítésre kerülnek</strong> és a konzultánsod számára hozzáférhetők.
       </div>
@@ -10272,7 +10747,7 @@ function chatBetolt() {
     // Jogi nyilatkozat
     chatUzenetek.push({
       ki:'rendszer', nev:'ℹ️ Fontos tudnivaló',
-      szoveg: '⚠️ Ez a chat táplálkozási tájékoztatást nyújt általános ismeretterjesztés céljából. A beszélgetések tartalma NEM minősül orvosi tanácsnak, diagnózisnak vagy terápiás javaslatnak. Egészségügyi döntés előtt mindig kérd ki kezelőorvosod véleményét. A konzultánsod a következő találkozón átnézi a kérdéseidet. 💙',
+      szoveg: '⚠️ Ez a chat táplálkozási tájékoztatást nyújt ismeretterjesztés céljából. A tartalom NEM minősül orvosi tanácsnak vagy diagnózisnak. Egészségügyi döntés előtt kérd ki orvosod véleményét. A konzultánsod a következő találkozón átnézi a kérdéseidet. 💙',
       ido: new Date().toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'})
     });
   }
@@ -10370,7 +10845,7 @@ async function chatKuld() {
     chatUzenetek.push({ ki:'eva', nev:'Széplábi Éva', szoveg: valasz, ido: new Date().toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'}) });
     chatElozmenytMent(szoveg, valasz, 'eva');
   } catch(e) {
-    const fallback = ['Most épp lassú a kapcsolat — próbáld újra! 💙','A kérdésedet a következő konzultáción megbeszéljük! 💙','Sajnos most nem érek el — de holnap minden kérdésre válaszolok! 💙'];
+    const fallback = ['Most kicsit lassú a kapcsolat — próbáld újra! 💙','A kérdésedet a következő konzultáción megbeszéljük! 💙','Sajnos most nem érek el — de holnap minden kérdésedre válaszolok! 💙'];
     chatUzenetek.push({ ki:'eva', nev:'Széplábi Éva', szoveg: fallback[Math.floor(Math.random()*3)], ido: new Date().toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'}) });
   }
   if (gep) gep.style.display = 'none';
