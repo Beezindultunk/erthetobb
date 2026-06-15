@@ -5961,18 +5961,24 @@ async function emailErtesitesKuld({ tipas, ugyfelNev, ugyfelEmail, program, konz
   }
 
   try {
+    // TO mező meghatározása — ügyfél vagy konzultáns kap emailt
+    const toCim = tipas === 'uj_ugyfel'
+      ? konzultansEmail || 'szeplabieva@gmail.com'   // új ügyfélnél Éva kap értesítőt
+      : konzultansEmail || 'szeplabieva@gmail.com';  // többi esetben Éva
+
     await window.emailjs.send(
       EMAILJS_CONFIG.serviceId,
       templateId,
       {
-        konzultans_email: konzultansEmail || 'szeplabieva@gmail.com',
+        konzultans_email: toCim,      // TO mező a sablonban
         ugyfel_nev:       ugyfelNev || '',
         ugyfel_email:     ugyfelEmail || '',
         program_nev:      PROG_NEV[program] || program || '',
         datum:            new Date().toLocaleDateString('hu-HU'),
         extra:            extraSzoveg,
         name:             'Érthetőbb Egészség rendszer',
-        email:            'noreply@erthetobbegeszseg.hu',
+        email:            'szeplabieva@gmail.com',
+        reply_to:         ugyfelEmail || 'szeplabieva@gmail.com',
       }
     );
     console.log('✅ Email elküldve:', tipas, '→', templateId);
@@ -6193,14 +6199,16 @@ Hajrá, ${ujHet}. hét! 💙
       EMAILJS_CONFIG.serviceId,
       'template_e1sg0pb',
       {
-        konzultans_email: u.email,  // az ügyfél emailjére megy
-        ugyfel_nev:   u.nev,
-        ugyfel_email: u.email,
-        program_nev:  PROG_NEV[u.program] || u.program,
-        datum:        new Date().toLocaleDateString('hu-HU'),
-        extra:        emailSzoveg,
-        name:         'Széplábi Éva — Érthetőbb Egészség',
-        email:        'szeplabieva@gmail.com',
+        // TO = ügyfél emailje, BCC/Reply-To = Éva
+        ugyfel_email:     u.email,
+        konzultans_email: u.email,   // TO mezőbe ezt tölti a sablon
+        reply_to:         'szeplabieva@gmail.com',
+        ugyfel_nev:       u.nev,
+        program_nev:      PROG_NEV[u.program] || u.program,
+        datum:            new Date().toLocaleDateString('hu-HU'),
+        extra:            emailSzoveg,
+        name:             'Széplábi Éva — Érthetőbb Egészség',
+        email:            'szeplabieva@gmail.com',
       }
     );
     localStorage.setItem(kulcs, new Date().toISOString());
