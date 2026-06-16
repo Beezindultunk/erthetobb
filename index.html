@@ -278,6 +278,17 @@ button{cursor:pointer;font-family:inherit;border:none;background:none}
       </div>
     </div>
 
+    <!-- Kijelentkezés -->
+    <div style="padding:16px 0 8px">
+      <button onclick="ugyfelKilep()"
+        style="width:100%;padding:14px;border-radius:12px;
+        background:var(--piros-v);border:1.5px solid var(--piros-k);
+        color:var(--piros);font-size:15px;font-weight:800;cursor:pointer;
+        display:flex;align-items:center;justify-content:center;gap:10px">
+        🚪 Kijelentkezés
+      </button>
+    </div>
+
   </div>
 </div>
 
@@ -714,6 +725,7 @@ button{cursor:pointer;font-family:inherit;border:none;background:none}
     <button class="nav-btn" onclick="oldal('o-ai-coach')"><span class="nav-ikon">🤖</span>AI Coach</button>
     <button class="nav-btn" onclick="oldal('o-foglalas')"><span class="nav-ikon">📅</span>Foglalás</button>
     <button class="nav-btn" onclick="oldal('o-chat')" id="nav-chat-btn"><span class="nav-ikon">💬</span>Chat</button>
+    <button class="nav-btn" onclick="ugyfelKilep()" style="color:var(--piros)"><span class="nav-ikon">🚪</span>Kilépés</button>
   </div>
 </div>
 
@@ -8610,7 +8622,7 @@ var kvizAllapot = JSON.parse(
 );
 // { 'eletmod_het1': { kesz: true, pontok: 2, max: 3, datum: '...' } }
 
-var kvizAktualis = { prog: null, het: null, kerdesIdx: 0, valaszok: {} };
+var kvizAktualis = { prog: "eletmod", het: 1, kerdesIdx: 0, valaszok: {}, kerdesek: [] };
 
 
 function kvizValaszt(valaszIdx) {
@@ -8677,8 +8689,10 @@ function kvizBetolt() {
 function kvizKerdesMutat() {
   const el = document.getElementById('kviz-tartalom');
   if (!el) return;
-  const { kerdesek, kerdesIdx, valaszok } = kvizAktualis;
-  if (!kerdesek || kerdesek.length === 0) return;
+  if (!kvizAktualis || !kvizAktualis.kerdesek || kvizAktualis.kerdesek.length === 0) return;
+  const kerdesek  = kvizAktualis.kerdesek;
+  const kerdesIdx = kvizAktualis.kerdesIdx;
+  const valaszok  = kvizAktualis.valaszok;
 
   // Ha vége — eredmény
   if (kerdesIdx >= kerdesek.length) {
