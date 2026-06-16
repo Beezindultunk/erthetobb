@@ -10454,13 +10454,16 @@ function chatJogiPopupMutat(kulcs) {
       </div>
 
       <div style="display:flex;align-items:flex-start;gap:12px;padding:14px;
-        background:var(--s50);border-radius:10px;margin-bottom:20px;cursor:pointer"
+        background:var(--s50);border-radius:10px;margin-bottom:20px;cursor:pointer;
+        border:2px solid transparent;transition:border .15s"
+        id="jogi-pipa-sor"
         onclick="chatJogiPipaToggle()">
-        <div id="jogi-pipa-box" style="width:22px;height:22px;border-radius:5px;
+        <div id="jogi-pipa-box" style="width:24px;height:24px;border-radius:6px;
           border:2px solid var(--s300);background:white;flex-shrink:0;margin-top:1px;
-          display:flex;align-items:center;justify-content:center;transition:all .15s">
+          display:flex;align-items:center;justify-content:center;transition:all .2s;
+          font-size:15px;font-weight:900">
         </div>
-        <div style="font-size:13px;color:var(--s700);line-height:1.5">
+        <div style="font-size:13px;color:var(--s700);line-height:1.6">
           Elolvastam és megértettem a fenti nyilatkozatot. Elfogadom, hogy az AI Coach nem nyújt orvosi tanácsot, és egészségügyi döntés előtt orvoshoz fordulok.
         </div>
       </div>
@@ -10474,7 +10477,8 @@ function chatJogiPopupMutat(kulcs) {
       </button>
 
       <div style="text-align:center;margin-top:12px">
-        <button onclick="vissza()" style="font-size:12px;color:var(--s400);background:none;border:none;cursor:pointer">
+        <button onclick="document.getElementById('chat-jogi-popup').remove();vissza()"
+          style="font-size:12px;color:var(--s400);background:none;border:none;cursor:pointer">
           Mégsem — visszalépek
         </button>
       </div>
@@ -10488,16 +10492,24 @@ function chatJogiPipaToggle() {
   jogiPipaAllapot = !jogiPipaAllapot;
   const box = document.getElementById('jogi-pipa-box');
   const btn = document.getElementById('jogi-elfogad-btn');
+  const sor = document.getElementById('jogi-pipa-sor');
+
   if (box) {
-    box.style.background    = jogiPipaAllapot ? 'var(--zold)' : 'white';
-    box.style.borderColor   = jogiPipaAllapot ? 'var(--zold)' : 'var(--s300)';
-    box.innerHTML           = jogiPipaAllapot ? '<span style="color:white;font-size:14px;font-weight:900">✓</span>' : '';
+    box.style.background  = jogiPipaAllapot ? 'var(--zold)' : 'white';
+    box.style.borderColor = jogiPipaAllapot ? 'var(--zold)' : 'var(--s300)';
+    box.innerHTML         = jogiPipaAllapot ? '✓' : '';
+    box.style.color       = 'white';
+  }
+  if (sor) {
+    sor.style.borderColor     = jogiPipaAllapot ? 'var(--zold-k)' : 'transparent';
+    sor.style.background      = jogiPipaAllapot ? 'var(--zold-v)' : 'var(--s50)';
   }
   if (btn) {
-    btn.disabled      = !jogiPipaAllapot;
-    btn.style.background = jogiPipaAllapot ? 'var(--kek)' : 'var(--s200)';
-    btn.style.color      = jogiPipaAllapot ? 'white' : 'var(--s400)';
-    btn.style.cursor     = jogiPipaAllapot ? 'pointer' : 'not-allowed';
+    btn.disabled             = !jogiPipaAllapot;
+    btn.style.background     = jogiPipaAllapot ? 'var(--kek)' : 'var(--s200)';
+    btn.style.color          = jogiPipaAllapot ? 'white' : 'var(--s400)';
+    btn.style.cursor         = jogiPipaAllapot ? 'pointer' : 'not-allowed';
+    btn.style.transform      = jogiPipaAllapot ? 'scale(1.01)' : 'scale(1)';
   }
 }
 
