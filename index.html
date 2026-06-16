@@ -2905,7 +2905,7 @@ function ugyfelPortalBetolt() {
 }
 
 // ══ REGISZTRÁCIÓ ══
-let regAdatok = { program: '', lep: 1 };
+var regAdatok = { program: '', lep: 1 };
 
 const PROG_KERDOIV = {
 
@@ -2976,8 +2976,8 @@ const PROG_KERDOIV = {
   ],
 };
 
-let regKerdoivValaszok = {};
-let regKerdoivIdx = 0;
+var regKerdoivValaszok = {};
+var regKerdoivIdx = 0;
 
 function regProgramValaszt(prog) {
   regAdatok = { program: prog, lep: 1 };
@@ -3212,9 +3212,9 @@ function regBelep() {
 }
 
 // ══ ÁLLAPOT ══
-let elozmeny = [];
-let aktualis = 'o-ki-vagy';
-let uSzint = 1, kSzint = 1, aSzint = 1;
+var elozmeny = [];
+var aktualis = 'o-ki-vagy';
+var uSzint = 1, kSzint = 1, aSzint = 1;
 
 // ══ BELÉPÉS ══
 // bejelentkezik() -> belepGomb() / demoBeleg() vette át
@@ -4175,12 +4175,12 @@ const SZOKASOK = {
 };
 
 // Napi szokás állapot (localStorage)
-let szokásAllapot = JSON.parse(
+var szokásAllapot = JSON.parse(
   localStorage.getItem('szokasok_' + new Date().toDateString()) || '{}'
 );
 
 // ── STREAK tárolás ──
-let szokásStreak = JSON.parse(localStorage.getItem('szokasok_streak') || '{"db":0,"utolso":""}');
+var szokásStreak = JSON.parse(localStorage.getItem('szokasok_streak') || '{"db":0,"utolso":""}');
 
 function szokasokBetolt(helyszin) {
   const u = bejelentkezettUser;
@@ -4902,7 +4902,7 @@ const KONZULTACIOK = [
   },
 ];
 
-let aktualisKonzUgyfelNev = '';
+var aktualisKonzUgyfelNev = '';
 
 function konzultacioOldal(ugyfelNev) {
   aktualisKonzUgyfelNev = ugyfelNev;
@@ -5144,8 +5144,8 @@ function hangulatDiagramRajzol() {
 }
 
 // ── Napló közérzet rögzítése (frissíti a trendet) ──
-let maiHangulat = null;
-let maiEnergia  = null;
+var maiHangulat = null;
+var maiEnergia  = null;
 
 function hangulatRogzit(ertek, tip) {
   if (tip === 'hangulat') {
@@ -5163,7 +5163,7 @@ function hangulatRogzit(ertek, tip) {
 // ══════════════════════════════════════
 // 😴 ALVÁSNAPLÓ (#5)
 // ══════════════════════════════════════
-let alvasAdatok = JSON.parse(localStorage.getItem('alvas_' + new Date().toDateString()) || '{}');
+var alvasAdatok = JSON.parse(localStorage.getItem('alvas_' + new Date().toDateString()) || '{}');
 
 function alvasFrissit() {
   const lefekves = document.getElementById('alvas-lefekves')?.value;
@@ -5393,7 +5393,7 @@ const RECEPT_ADATBAZIS = {
   ],
 };
 
-let aktReceptIdx = 0;
+var aktReceptIdx = 0;
 
 function recept_betolt() {
   const u = bejelentkezettUser || {};
@@ -5607,7 +5607,7 @@ self.addEventListener('fetch', e => {
 }
 
 // ── Telepítési prompt kezelése ──
-let pwaTelepitesPrompt = null;
+var pwaTelepitesPrompt = null;
 
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
@@ -5716,7 +5716,7 @@ const JUTALMAK = [
 ];
 
 // Pont adatok LocalStorage-ból
-let pontAdatok = JSON.parse(localStorage.getItem('pont_adatok') || JSON.stringify({
+var pontAdatok = JSON.parse(localStorage.getItem('pont_adatok') || JSON.stringify({
   osszes:    0,
   mai:       0,
   maiDatum:  '',
@@ -5805,7 +5805,7 @@ function pontUIFrissit() {
 }
 
 // ── Napi kvíz rendszer (1 kvíz naponta, random) ──
-let maiKvizMegvan = false;
+var maiKvizMegvan = false;
 
 function naiKvizEllenorzes() {
   const ma = new Date().toDateString();
@@ -6032,7 +6032,7 @@ const PUSH_IDOPONTOK = [
   { ora: 21, perc: 30, uzenet: 'Bevetted ma az összes vitamint? 💊', id: 'vitamin' },
 ];
 
-let pushTimerIds = [];
+var pushTimerIds = [];
 
 async function pushEngedelyKer() {
   if (!('Notification' in window)) {
@@ -6808,7 +6808,7 @@ const DEMO_KIEMEL_UZENETEK = {
   ],
 };
 
-let kiemelLatva = localStorage.getItem('konz_kiemel_latva_' + new Date().toDateString());
+var kiemelLatva = localStorage.getItem('konz_kiemel_latva_' + new Date().toDateString());
 
 function konzKiemelBetolt() {
   const u = bejelentkezettUser;
@@ -6940,7 +6940,7 @@ const CIKLUS_FAZISOK = [
 ];
 
 // Ciklus adatok LocalStorage-ban
-let ciklusAdatok = JSON.parse(localStorage.getItem('ciklus_adatok') || JSON.stringify({
+var ciklusAdatok = JSON.parse(localStorage.getItem('ciklus_adatok') || JSON.stringify({
   utolso_kezdes: null,  // ISO dátum
   ciklus_hossz: 28,
   adatok: [],           // [{datum, nap, tunetek, hangulat}]
@@ -7224,7 +7224,7 @@ const VITAMINOK = {
   ],
 };
 
-let vitaminAllapot = JSON.parse(
+var vitaminAllapot = JSON.parse(
   localStorage.getItem('vitamin_' + new Date().toDateString()) || '{}'
 );
 
@@ -7491,7 +7491,7 @@ function trimeszterHetValaszt(het) {
 // ══════════════════════════════════════
 
 // Napi szoptatás adatok
-let szoptatasAdatok = JSON.parse(
+var szoptatasAdatok = JSON.parse(
   localStorage.getItem('szopt_' + new Date().toDateString()) || '[]'
 );
 // [{oldal:'bal'/'jobb'/'mindkettő', perc:15, ido:'08:30', megjegyzes:''}]
@@ -8605,12 +8605,12 @@ const KVIZ_ADATBAZIS = {
 
 };
 
-let kvizAllapot = JSON.parse(
+var kvizAllapot = JSON.parse(
   localStorage.getItem('kviz_allapot') || '{}'
 );
 // { 'eletmod_het1': { kesz: true, pontok: 2, max: 3, datum: '...' } }
 
-let kvizAktualis = { prog: null, het: null, kerdesIdx: 0, valaszok: {} };
+var kvizAktualis = { prog: null, het: null, kerdesIdx: 0, valaszok: {} };
 
 
 function kvizValaszt(valaszIdx) {
@@ -9883,8 +9883,8 @@ function konzKilep() {
 // SZEPLÁBI ÉVA AI CHAT
 // ══════════════════════════════════════
 
-let chatUzenetek = [];
-let chatTortenet = [];
+var chatUzenetek = [];
+var chatTortenet = [];
 
 // ══════════════════════════════════════
 // 🧠 SZEMÉLYRE SZABOTT AI — Ügyfél profil összegyűjtő
@@ -10095,8 +10095,8 @@ const EVA_GYORS = {
 // 📋💬 KONZULTÁNS DOKSI PANEL
 // ══════════════════════════════════════
 
-let aktualisDoksiUgyfel = '';
-let aktualisDoksiTab    = 'kerdoiv';
+var aktualisDoksiUgyfel = '';
+var aktualisDoksiTab    = 'kerdoiv';
 
 function konzDoksiPanel(ugyfelNev, tab) {
   aktualisDoksiUgyfel = ugyfelNev;
@@ -10487,7 +10487,7 @@ function chatJogiPopupMutat(kulcs) {
   document.body.appendChild(popup);
 }
 
-let jogiPipaAllapot = false;
+var jogiPipaAllapot = false;
 function chatJogiPipaToggle() {
   jogiPipaAllapot = !jogiPipaAllapot;
   const box = document.getElementById('jogi-pipa-box');
@@ -10884,7 +10884,7 @@ function szintFrissit(p, sz, nevek, gombok) {
 }
 
 // ══ TOAST ══
-let tTimer;
+var tTimer;
 function toast(u,t=''){
   if(!u)return;
   const el=document.getElementById('toast');
@@ -11820,7 +11820,7 @@ let aktualisKerdesIdx = 0;
 // 📋 ÚJ KÉRDŐÍV RENDSZER — Szekciós, teljes kérdőívek
 // ══════════════════════════════════════
 
-let aktualisKerdoivAdatok = {
+var aktualisKerdoivAdatok = {
   program:   '',
   ugyfelNev: '',
   valaszok:  {},
@@ -12440,7 +12440,7 @@ function ujUgyfelMent() {
 
 
 // ══ KONZULTÁNS ÜGYFÉL DASHBOARD ══
-let aktualisDashUgyfel = '';
+var aktualisDashUgyfel = '';
 
 function konzUgyfelDashboard(nev) {
   ugyfelDashboard(nev);
